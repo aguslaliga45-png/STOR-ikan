@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STORE IKAN - Catatan Stok & Pemotongan</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+</head>
+<body class="bg-slate-50 font-sans text-slate-800 min-h-screen pb-12">
+
+    <!-- Header Banner -->
+    <header class="bg-blue-700 text-white p-4 shadow-md sticky top-0 z-40">
+        <div class="max-w-xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-2xl bg-cyan-400 flex items-center justify-center text-xl shadow-inner">
+                    🐟
+                </div>
+                <div>
+                    <h1 class="text-lg font-black tracking-wide leading-none">STORE IKAN</h1>
+                    <p class="text-[11px] text-blue-100 font-medium mt-1">Pencatatan Stok & Pemotongan</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="backupData()" class="bg-blue-600 hover:bg-blue-800 text-white text-xs px-3 py-2 rounded-xl font-semibold flex items-center gap-1.5 shadow border border-blue-500">
+                    <i class="fa-solid fa-download"></i> Backup
+                </button>
+                <button onclick="shareGroupCode()" class="bg-cyan-400 hover:bg-cyan-500 text-blue-950 text-xs px-3 py-2 rounded-xl font-bold flex items-center gap-1.5 shadow">
+                    <i class="fa-solid fa-share-nodes"></i> Kirim HP Lain
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-xl mx-auto p-3.5 space-y-4">
+
+        <!-- Status Mode Penyimpanan & Sync -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-3 shadow-sm flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-server text-blue-600 text-sm"></i>
+                <span class="text-xs font-semibold text-slate-600">Kode Toko:</span>
+                <input type="text" id="groupCodeInput" value="STORE-IKAN-01" class="font-mono text-xs font-bold text-blue-700 bg-slate-100 px-2 py-1 rounded-lg w-32 uppercase border border-slate-200 focus:outline-none">
+                <button onclick="changeGroupCode()" class="text-xs text-blue-600 hover:underline font-bold">Ganti</button>
+            </div>
+            <span id="syncBadge" class="text-[11px] bg-emerald-100 text-emerald-700 px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1">
+                <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Ready
+            </span>
+        </div>
+
+        <!-- 4 Grid Statistik Dashboard -->
+        <div class="grid grid-cols-2 gap-3">
+            <div class="bg-white p-3.5 rounded-2xl border border-slate-200/80 text-center shadow-sm">
+                <p class="text-xs font-semibold text-slate-500">Total Box/Item</p>
+                <p id="statTotalBox" class="text-2xl font-black text-slate-800 mt-1">0</p>
+            </div>
+            <div class="bg-white p-3.5 rounded-2xl border border-slate-200/80 text-center shadow-sm">
+                <p class="text-xs font-semibold text-blue-600">Total IN (Masuk)</p>
+                <p id="statTotalIN" class="text-2xl font-black text-blue-700 mt-1">0.000 Kg</p>
+            </div>
+            <div class="bg-white p-3.5 rounded-2xl border border-amber-200/70 text-center shadow-sm">
+                <p class="text-xs font-semibold text-amber-600">Di-CUT (Potong)</p>
+                <p id="statTotalCut" class="text-2xl font-black text-amber-600 mt-1">0 Box</p>
+            </div>
+            <div class="bg-white p-3.5 rounded-2xl border border-emerald-200/70 text-center shadow-sm">
+                <p class="text-xs font-semibold text-emerald-600">Stok Tersedia</p>
+                <p id="statStokKg" class="text-2xl font-black text-emerald-600 mt-1">0.000 Kg</p>
+            </div>
+        </div>
+
+        <!-- Search & Button Modal Tambah -->
+        <div class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+            <div class="relative">
+                <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-400 text-sm"></i>
+                <input type="text" id="searchInput" oninput="renderTable()" placeholder="Cari No. Box..." class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <button onclick="openModal()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl shadow transition text-sm flex items-center justify-center gap-2">
+                <i class="fa-solid fa-plus"></i> Tambah Entry Box
+            </button>
+        </div>
+
+        <!-- Tabel Penyimpanan Ikan -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="p-3 bg-slate-50 border-b flex justify-between items-center">
+                <h3 class="font-bold text-slate-800 text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-table-cells text-blue-600"></i> Tabel Penyimpanan Ikan
+                </h3>
+                <span id="itemCountBadge" class="bg-slate-200 text-slate-700 text-xs px-2.5 py-0.5 rounded-full font-semibold">0 Data</span>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs">
+                    <thead class="bg-slate-100 text-slate-600 border-b uppercase font-bold text-[10px] tracking-wider">
+                        <tr>
+                            <th class="py-3 px-3 text-center">NO</th>
+                            <th class="py-3 px-3 text-center">FOTO</th>
+                            <th class="py-3 px-3 text-center">IN (KG/EKOR)</th>
+                            <th class="py-3 px-3 text-center">CUT</th>
+                            <th class="py-3 px-3 text-center">OUT</th>
+                            <th class="py-3 px-3 text-center">AKSI</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inventoryTable" class="divide-y divide-slate-100 font-medium text-slate-700">
+                        <!-- Data Dinamis -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Hidden Input File untuk Upload Foto dari Tabel -->
+    <input type="file" id="directTableFileInput" accept="image/*" class="hidden" onchange="handleDirectTableUpload(event)">
+
+    <!-- Modal Form Input -->
+    <div id="boxModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl max-w-md w-full p-4 shadow-xl space-y-4">
+            <div class="flex justify-between items-center border-b pb-2">
+                <h3 id="modalTitle" class="font-bold text-slate-800 text-base">Tambah Entry Box</h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <form id="boxForm" onsubmit="saveBoxData(event)" class="space-y-3">
+                <input type="hidden" id="editKey" value="">
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">No. Box / ID</label>
+                    <input type="text" id="boxNo" required class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Misal: 11">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Jumlah IN (Kg/Berat)</label>
+                    <input type="number" step="0.001" id="boxWeight" required class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Misal: 9.400">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Upload Foto Ikan (Opsional)</label>
+                    <input type="file" id="boxPhoto" accept="image/*" class="w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700">
+                    <input type="hidden" id="existingPhoto" value="">
+                </div>
+
+                <div class="flex items-center gap-6 py-2">
+                    <label class="inline-flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="isCut" class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
+                        <span class="text-xs font-bold text-blue-700">Di-CUT (Potong)</span>
+                    </label>
+                    <label class="inline-flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="isOut" class="w-4 h-4 text-rose-600 rounded focus:ring-rose-500">
+                        <span class="text-xs font-bold text-rose-600">OUT (Keluar)</span>
+                    </label>
+                </div>
+
+                <div class="flex gap-2 pt-2">
+                    <button type="button" onclick="closeModal()" class="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-2.5 rounded-xl text-xs">
+                        Batal
+                    </button>
+                    <button type="submit" id="submitBtn" class="w-1/2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl text-xs shadow">
+                        Simpan Barang
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- JavaScript Engine -->
+    <script>
+        // Config Firebase Opsional
+        const firebaseConfig = {
+            databaseURL: "https://fish-store-default-rtdb.asia-southeast1.firebasedatabase.app/"
+        };
+        
+        let db = null;
+        try {
+            if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+            db = firebase.database();
+        } catch(e) {
+            console.log("Menjalankan Mode Standalone/Local Storage");
+        }
+
+        let currentGroupCode = "STORE-IKAN-01";
+        let localData = {};
+        let activeTargetKeyForUpload = null;
+
+        // Ambil ID Toko dari LocalStorage
+        if (localStorage.getItem('fishStoreGroupCode')) {
+            currentGroupCode = localStorage.getItem('fishStoreGroupCode');
+            document.getElementById('groupCodeInput').value = currentGroupCode;
+        }
+
+        // Load awal data
+        loadLocalData();
+        connectToOnlineDatabase();
+
+        function loadLocalData() {
+            const saved = localStorage.getItem(`store_data_${currentGroupCode}`);
+            localData = saved ? JSON.parse(saved) : {};
+            renderTable();
+            calculateStats();
+        }
+
+        function saveLocalData() {
+            localStorage.setItem(`store_data_${currentGroupCode}`, JSON.stringify(localData));
+            renderTable();
+            calculateStats();
+            syncToOnline();
+        }
+
+        function connectToOnlineDatabase() {
+            if (!db) return;
+            const syncBadge = document.getElementById('syncBadge');
+            
+            db.ref(`stores/${currentGroupCode}`).on('value', (snapshot) => {
+                const onlineVal = snapshot.val();
+                if (onlineVal) {
+                    localData = onlineVal;
+                    localStorage.setItem(`store_data_${currentGroupCode}`, JSON.stringify(localData));
+                    renderTable();
+                    calculateStats();
+                }
+                syncBadge.className = "text-[11px] bg-emerald-100 text-emerald-700 px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1";
+                syncBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Online Sync`;
+            }, (err) => {
+                syncBadge.className = "text-[11px] bg-amber-100 text-amber-700 px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1";
+                syncBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500"></span> Mode Lokal`;
+            });
+        }
+
+        function syncToOnline() {
+            if (db) {
+                db.ref(`stores/${currentGroupCode}`).set(localData).catch(err => console.log("Gagal sync online:", err));
+            }
+        }
+
+        function changeGroupCode() {
+            const input = document.getElementById('groupCodeInput').value.trim().toUpperCase();
+            if (!input) return alert("Kode Toko wajib diisi!");
+            currentGroupCode = input;
+            localStorage.setItem('fishStoreGroupCode', currentGroupCode);
+            loadLocalData();
+            connectToOnlineDatabase();
+            alert(`Berhasil ganti Toko: ${currentGroupCode}`);
+        }
+
+        function shareGroupCode() {
+            if (navigator.share) {
+                navigator.share({
+                    title: 'STORE IKAN',
+                    text: `Kode Toko untuk sync HP lain: ${currentGroupCode}`,
+                    url: window.location.href
+                }).catch(console.error);
+            } else {
+                navigator.clipboard.writeText(currentGroupCode);
+                alert(`Kode Toko "${currentGroupCode}" berhasil disalin!`);
+            }
+        }
+
+        function backupData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(localData, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `Backup_Ikan_${currentGroupCode}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function compressImage(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.src = event.target.result;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const MAX_WIDTH = 180;
+                        const scaleFactor = MAX_WIDTH / img.width;
+                        canvas.width = MAX_WIDTH;
+                        canvas.height = img.height * scaleFactor;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        resolve(canvas.toDataURL('image/jpeg', 0.6));
+                    };
+                };
+                reader.onerror = (error) => reject(error);
+            });
+        }
+
+        function openModal() {
+            resetForm();
+            document.getElementById('boxModal').classList.remove('hidden');
+            document.getElementById('boxModal').classList.add('flex');
+        }
+
+        function closeModal() {
+            document.getElementById('boxModal').classList.add('hidden');
+            document.getElementById('boxModal').classList.remove('flex');
+        }
+
+        async function saveBoxData(e) {
+            e.preventDefault();
+            const key = document.getElementById('editKey').value || 'item_' + Date.now();
+            const boxNo = document.getElementById('boxNo').value.trim();
+            const weight = parseFloat(document.getElementById('boxWeight').value) || 0;
+            const isCut = document.getElementById('isCut').checked;
+            const isOut = document.getElementById('isOut').checked;
+            const photoInput = document.getElementById('boxPhoto');
+            let photoUrl = document.getElementById('existingPhoto').value;
+
+            if (photoInput.files && photoInput.files[0]) {
+                try { 
+                    photoUrl = await compressImage(photoInput.files[0]); 
+                } catch (err) {
+                    console.error("Gagal kompres foto", err);
+                }
+            }
+
+            localData[key] = {
+                boxNo: boxNo,
+                weight: weight,
+                isCut: isCut,
+                isOut: isOut,
+                photo: photoUrl || null,
+                updatedAt: Date.now()
+            };
+
+            saveLocalData();
+            closeModal();
+        }
+
+        function resetForm() {
+            document.getElementById('editKey').value = '';
+            document.getElementById('boxNo').value = '';
+            document.getElementById('boxWeight').value = '';
+            document.getElementById('isCut').checked = false;
+            document.getElementById('isOut').checked = false;
+            document.getElementById('boxPhoto').value = '';
+            document.getElementById('existingPhoto').value = '';
+            document.getElementById('modalTitle').innerText = 'Tambah Entry Box';
+        }
+
+        function editBox(key) {
+            const item = localData[key];
+            if (!item) return;
+
+            document.getElementById('editKey').value = key;
+            document.getElementById('boxNo').value = item.boxNo;
+            document.getElementById('boxWeight').value = item.weight;
+            document.getElementById('isCut').checked = item.isCut || false;
+            document.getElementById('isOut').checked = item.isOut || false;
+            document.getElementById('existingPhoto').value = item.photo || '';
+            document.getElementById('modalTitle').innerText = `Edit Box #${item.boxNo}`;
+
+            openModal();
+        }
+
+        function deleteBox(key) {
+            if (confirm("Apakah Anda yakin ingin menghapus barang ini?")) {
+                delete localData[key];
+                saveLocalData();
+            }
+        }
+
+        function triggerDirectPhotoUpload(key) {
+            activeTargetKeyForUpload = key;
+            document.getElementById('directTableFileInput').click();
+        }
+
+        async function handleDirectTableUpload(event) {
+            const file = event.target.files[0];
+            if (file && activeTargetKeyForUpload && localData[activeTargetKeyForUpload]) {
+                try {
+                    const compressedBase64 = await compressImage(file);
+                    localData[activeTargetKeyForUpload].photo = compressedBase64;
+                    saveLocalData();
+                } catch (err) {
+                    alert("Gagal mengunggah foto!");
+                }
+            }
+            event.target.value = "";
+        }
+
+        function toggleStatus(key, field) {
+            if (localData[key]) {
+                localData[key][field] = !localData[key][field];
+                saveLocalData();
+            }
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('inventoryTable');
+            const searchVal = document.getElementById('searchInput').value.toLowerCase();
+            const keys = Object.keys(localData);
+
+            if (keys.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center py-8 text-slate-400">
+                            Belum ada data barang tersimpan. Klik tombol + untuk menambahkan.
+                        </td>
+                    </tr>`;
+                document.getElementById('itemCountBadge').innerText = "0 Data";
+                return;
+            }
+
+            let filteredKeys = keys.filter(key => {
+                const item = localData[key];
+                return item.boxNo.toString().toLowerCase().includes(searchVal);
+            });
+
+            filteredKeys.sort((a, b) => parseInt(localData[a].boxNo) - parseInt(localData[b].boxNo));
+
+            let html = '';
+            filteredKeys.forEach(key => {
+                const item = localData[key];
+                const isOut = item.isOut;
+
+                html += `
+                <tr class="hover:bg-slate-50 transition border-b border-slate-100 ${isOut ? 'bg-slate-50/60' : ''}">
+                    <!-- NO BOX -->
+                    <td class="py-3 px-3 text-center font-bold text-slate-900 ${isOut ? 'line-through text-slate-400' : ''}">
+                        ${item.boxNo}
+                    </td>
+
+                    <!-- FOTO -->
+                    <td class="py-3 px-3 text-center">
+                        <button onclick="triggerDirectPhotoUpload('${key}')" class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 flex items-center justify-center mx-auto overflow-hidden shadow-xs transition" title="Klik untuk tambah/ubah foto">
+                            ${item.photo 
+                                ? `<img src="${item.photo}" class="w-full h-full object-cover">` 
+                                : `<i class="fa-regular fa-image text-slate-400 text-sm"></i>`}
+                        </button>
+                    </td>
+
+                    <!-- IN (KG) -->
+                    <td class="py-3 px-3 text-center font-semibold ${isOut ? 'line-through text-slate-400' : 'text-slate-700'}">
+                        ${formatNumber(item.weight)}
+                    </td>
+
+                    <!-- CUT CHECKBOX -->
+                    <td class="py-3 px-3 text-center">
+                        <button onclick="toggleStatus('${key}', 'isCut')" class="w-6 h-6 rounded-md inline-flex items-center justify-center border transition ${item.isCut ? 'bg-blue-50 border-blue-200 text-blue-600 font-bold' : 'border-slate-200 text-slate-300'}">
+                            ${item.isCut ? '<i class="fa-solid fa-check text-xs"></i>' : ''}
+                        </button>
+                    </td>
+
+                    <!-- OUT CHECKBOX -->
+                    <td class="py-3 px-3 text-center">
+                        <button onclick="toggleStatus('${key}', 'isOut')" class="w-6 h-6 rounded-md inline-flex items-center justify-center border transition ${item.isOut ? 'bg-blue-50 border-blue-200 text-blue-600 font-bold' : 'border-slate-200 text-slate-300'}">
+                            ${item.isOut ? '<i class="fa-solid fa-check text-xs"></i>' : ''}
+                        </button>
+                    </td>
+
+                    <!-- AKSI -->
+                    <td class="py-3 px-3 text-center">
+                        <div class="flex items-center justify-center gap-2">
+                            <button onclick="editBox('${key}')" class="text-blue-600 hover:text-blue-800 text-sm" title="Edit">
+                                <i class="fa-regular fa-pen-to-square"></i>
+                            </button>
+                            <button onclick="deleteBox('${key}')" class="text-rose-500 hover:text-rose-700 text-sm" title="Hapus">
+                                <i class="fa-regular fa-trash-can"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>`;
+            });
+
+            tbody.innerHTML = html;
+            document.getElementById('itemCountBadge').innerText = `${filteredKeys.length} Data`;
+        }
+
+        function calculateStats() {
+            const keys = Object.keys(localData);
+            let totalBox = keys.length;
+            let totalIN = 0;
+            let cutBox = 0;
+            let stokTersediaKg = 0;
+
+            keys.forEach(key => {
+                const item = localData[key];
+                const weight = parseFloat(item.weight) || 0;
+                
+                totalIN += weight;
+                if (item.isCut) cutBox++;
+                if (!item.isOut) stokTersediaKg += weight;
+            });
+
+            document.getElementById('statTotalBox').innerText = totalBox;
+            document.getElementById('statTotalIN').innerText = `${formatNumber(totalIN)} Kg`;
+            document.getElementById('statTotalCut').innerText = `${cutBox} Box`;
+            document.getElementById('statStokKg').innerText = `${formatNumber(stokTersediaKg)} Kg`;
+        }
+
+        function formatNumber(num) {
+            return num.toLocaleString('id-ID', { minimumFractionDigits: 1, maximumFractionDigits: 3 });
+        }
+    </script>
+</body>
+</html>
