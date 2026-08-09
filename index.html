@@ -8,9 +8,12 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Firebase SDKs -->
+    
+    <!-- Firebase SDKs (Versi 8 - Kompatibel) -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <!-- Ditambahkan: Firebase Storage SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
 </head>
 <body class="bg-slate-50 font-sans text-slate-800 min-h-screen pb-12">
 
@@ -47,8 +50,8 @@
                 <input type="text" id="groupCodeInput" value="STORE-IKAN-01" class="font-mono text-xs font-bold text-blue-700 bg-slate-100 px-2 py-1 rounded-lg w-32 uppercase border border-slate-200 focus:outline-none">
                 <button onclick="changeGroupCode()" class="text-xs text-blue-600 hover:underline font-bold">Ganti</button>
             </div>
-            <span id="syncBadge" class="text-[11px] bg-emerald-100 text-emerald-700 px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1">
-                <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Ready
+            <span id="syncBadge" class="text-[11px] bg-amber-100 text-amber-700 px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1">
+                <span class="w-2 h-2 rounded-full bg-amber-500"></span> Mode Lokal
             </span>
         </div>
 
@@ -170,30 +173,32 @@
 
     <!-- JavaScript Engine -->
     <script>
-        // Config Firebase Opsional
+        // Konfigurasi Firebase Anda (Tambahkan storageBucket jika ada di console Firebase)
         const firebaseConfig = {
-            databaseURL: "https://fish-store-default-rtdb.asia-southeast1.firebasedatabase.app/"
+            databaseURL: "https://fish-store-default-rtdb.asia-southeast1.firebasedatabase.app/",
+            storageBucket: "fish-store-default-rtdb.appspot.com" // Menyesuaikan dengan URL DB Firebase Anda
         };
         
         let db = null;
+        let storage = null;
+
         try {
             if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
             db = firebase.database();
+            storage = firebase.storage();
         } catch(e) {
-            console.log("Menjalankan Mode Standalone/Local Storage");
+            console.log("Menjalankan Mode Standalone/Local Storage tanpa Cloud Storage");
         }
 
         let currentGroupCode = "STORE-IKAN-01";
         let localData = {};
         let activeTargetKeyForUpload = null;
 
-        // Ambil ID Toko dari LocalStorage
         if (localStorage.getItem('fishStoreGroupCode')) {
             currentGroupCode = localStorage.getItem('fishStoreGroupCode');
             document.getElementById('groupCodeInput').value = currentGroupCode;
         }
 
-        // Load awal data
         loadLocalData();
         connectToOnlineDatabase();
 
@@ -270,26 +275,12 @@
             downloadAnchor.remove();
         }
 
-        function compressImage(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = (event) => {
-                    const img = new Image();
-                    img.src = event.target.result;
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 180;
-                        const scaleFactor = MAX_WIDTH / img.width;
-                        canvas.width = MAX_WIDTH;
-                        canvas.height = img.height * scaleFactor;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        resolve(canvas.toDataURL('image/jpeg', 0.6));
-                    };
-                };
-                reader.onerror = (error) => reject(error);
-            });
+        // Fungsi Upload Foto ke Firebase Storage (Online Cloud)
+        async function uploadImageToCloud(file, itemKey) {
+            if (!storage) throw new Error("Firebase Storage belum aktif.");
+            const storageRef = storage.ref(`images/${currentGroupCode}/${itemKey}_${Date.now()}`);
+            const snapshot = await storageRef.put(file);
+            return await snapshot.ref.getDownloadURL();
         }
 
         function openModal() {
@@ -305,6 +296,9 @@
 
         async function saveBoxData(e) {
             e.preventDefault();
+            const submitBtn = document.getElementById('submitBtn');
+            const originalBtnText = submitBtn.innerText;
+            
             const key = document.getElementById('editKey').value || 'item_' + Date.now();
             const boxNo = document.getElementById('boxNo').value.trim();
             const weight = parseFloat(document.getElementById('boxWeight').value) || 0;
@@ -314,10 +308,17 @@
             let photoUrl = document.getElementById('existingPhoto').value;
 
             if (photoInput.files && photoInput.files[0]) {
-                try { 
-                    photoUrl = await compressImage(photoInput.files[0]); 
+                try {
+                    submitBtn.innerText = "Mengunggah Foto...";
+                    submitBtn.disabled = true;
+                    // Upload langsung ke Firebase Storage
+                    photoUrl = await uploadImageToCloud(photoInput.files[0], key);
                 } catch (err) {
-                    console.error("Gagal kompres foto", err);
+                    console.error("Gagal upload ke cloud, fallback ke sistem", err);
+                    alert("Gagal mengunggah foto online. Pastikan Firebase Storage aktif.");
+                } finally {
+                    submitBtn.innerText = originalBtnText;
+                    submitBtn.disabled = false;
                 }
             }
 
@@ -376,11 +377,11 @@
             const file = event.target.files[0];
             if (file && activeTargetKeyForUpload && localData[activeTargetKeyForUpload]) {
                 try {
-                    const compressedBase64 = await compressImage(file);
-                    localData[activeTargetKeyForUpload].photo = compressedBase64;
+                    const photoUrl = await uploadImageToCloud(file, activeTargetKeyForUpload);
+                    localData[activeTargetKeyForUpload].photo = photoUrl;
                     saveLocalData();
                 } catch (err) {
-                    alert("Gagal mengunggah foto!");
+                    alert("Gagal mengunggah foto ke Cloud Storage!");
                 }
             }
             event.target.value = "";
@@ -414,7 +415,10 @@
                 return item.boxNo.toString().toLowerCase().includes(searchVal);
             });
 
-            filteredKeys.sort((a, b) => parseInt(localData[a].boxNo) - parseInt(localData[b].boxNo));
+            // Perbaikan Bug 1: Penyortiran berbasis angka & teks yang aman (Natural Sort)
+            filteredKeys.sort((a, b) => 
+                String(localData[a].boxNo).localeCompare(String(localData[b].boxNo), undefined, { numeric: true, sensitivity: 'base' })
+            );
 
             let html = '';
             filteredKeys.forEach(key => {
@@ -449,9 +453,9 @@
                         </button>
                     </td>
 
-                    <!-- OUT CHECKBOX -->
+                    <!-- OUT CHECKBOX (Perbaikan Bug 4: Indikator Merah) -->
                     <td class="py-3 px-3 text-center">
-                        <button onclick="toggleStatus('${key}', 'isOut')" class="w-6 h-6 rounded-md inline-flex items-center justify-center border transition ${item.isOut ? 'bg-blue-50 border-blue-200 text-blue-600 font-bold' : 'border-slate-200 text-slate-300'}">
+                        <button onclick="toggleStatus('${key}', 'isOut')" class="w-6 h-6 rounded-md inline-flex items-center justify-center border transition ${item.isOut ? 'bg-rose-50 border-rose-200 text-rose-600 font-bold' : 'border-slate-200 text-slate-300'}">
                             ${item.isOut ? '<i class="fa-solid fa-check text-xs"></i>' : ''}
                         </button>
                     </td>
