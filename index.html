@@ -3,103 +3,80 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Store Ikan - Aplikasi Stok Ikan Realtime</title>
-    <!-- Tailwind CSS & FontAwesome Icons -->
+    <title>Apk Ikan - Store Ikan</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Firebase SDK (v9 Compatibility) -->
+    <!-- Firebase Realtime Database -->
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
 </head>
-<body class="bg-slate-100 min-h-screen text-slate-800 pb-12">
+<body class="bg-gray-100 min-h-screen text-gray-800 pb-10">
 
-    <!-- Header / Navbar -->
-    <div class="bg-blue-700 text-white p-4 shadow-md sticky top-0 z-50">
-        <div class="max-w-md mx-auto flex justify-between items-center">
-            <div class="flex items-center space-x-2">
-                <i class="fa-solid font-bold text-2xl fa-fish"></i>
-                <h1 class="font-bold text-xl tracking-wide">IKAN HENG</h1>
-            </div>
-            <div class="text-xs bg-blue-800 px-3 py-1 rounded-full flex items-center gap-1">
-                <span id="status-dot" class="w-2 h-2 rounded-full bg-amber-400 inline-block"></span>
-                <span id="status-text">Menghubungkan...</span>
-            </div>
-        </div>
+    <!-- Header -->
+    <div class="bg-blue-600 text-white p-4 shadow-md sticky top-0 z-50 flex justify-between items-center">
+        <h1 class="font-bold text-lg">Apk Ikan</h1>
+        <span id="status-badge" class="text-xs bg-blue-800 px-2.5 py-1 rounded-full">Menghubungkan...</span>
     </div>
 
     <div class="max-w-md mx-auto p-4 space-y-4">
 
-        <!-- Pengaturan Kode Toko Sync -->
-        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-            <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Kode Toko / ID Sync (Harus Sama Semua HP)</label>
+        <!-- Kode Toko Sync -->
+        <div class="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
+            <label class="block text-xs font-bold text-gray-600 mb-1">KODE TOKO (HARUS SAMA DI SEMUA HP):</label>
             <div class="flex gap-2">
-                <input type="text" id="store-code" value="STORE-IKAN-01" class="flex-1 bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm font-bold text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <button onclick="connectStore()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-1">
-                    <i class="fa-solid fa-sync"></i> Hubungkan
-                </button>
+                <input type="text" id="store-code" value="STORE-IKAN-01" class="flex-1 bg-gray-50 border rounded px-3 py-1.5 text-sm font-semibold text-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                <button onclick="connectStore()" class="bg-blue-600 text-white px-3 py-1.5 rounded text-sm font-semibold">Hubungkan</button>
             </div>
-            <p class="text-[11px] text-slate-400 mt-1">*Pastikan kode toko di semua HP pegawai diisi sama persis agar data tersinkron.</p>
         </div>
 
-        <!-- Form Tambah Stok Ikan -->
-        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
-            <h2 class="font-bold text-slate-700 text-sm flex items-center gap-2 border-b pb-2">
-                <i class="fa-solid fa-plus-circle text-blue-600"></i> Tambah / Update Stok Ikan
-            </h2>
+        <!-- Form Tambah Stok -->
+        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 space-y-3">
+            <h2 class="font-bold text-gray-700 text-sm border-b pb-2">Tambah Data Ikan</h2>
             
             <div>
-                <label class="block text-xs text-slate-500 mb-1">Nama Ikan</label>
-                <input type="text" id="fish-name" placeholder="Misal: Ikan Kerapu / Kakap" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <label class="block text-xs text-gray-500 mb-1">Nama Ikan</label>
+                <input type="text" id="fish-name" placeholder="Nama ikan..." class="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
             </div>
 
             <div class="grid grid-cols-2 gap-2">
                 <div>
-                    <label class="block text-xs text-slate-500 mb-1">Berat (Kg)</label>
-                    <input type="number" id="fish-weight" step="0.1" placeholder="0.0" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <label class="block text-xs text-gray-500 mb-1">Berat (Kg)</label>
+                    <input type="number" id="fish-weight" step="0.1" placeholder="0" class="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
                 </div>
                 <div>
-                    <label class="block text-xs text-slate-500 mb-1">Jumlah (Ekor)</label>
-                    <input type="number" id="fish-count" placeholder="0" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <label class="block text-xs text-gray-500 mb-1">Jumlah (Ekor)</label>
+                    <input type="number" id="fish-count" placeholder="0" class="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
                 </div>
             </div>
 
             <div>
-                <label class="block text-xs text-slate-500 mb-1">Foto Stok (Opsional)</label>
-                <input type="file" id="fish-photo" accept="image/*" class="w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                <label class="block text-xs text-gray-500 mb-1">Foto Ikan (Opsional)</label>
+                <input type="file" id="fish-photo" accept="image/*" class="w-full text-xs text-gray-500">
             </div>
 
-            <button onclick="saveItem()" id="btn-save" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-lg text-sm shadow transition flex items-center justify-center gap-2">
-                <i class="fa-solid fa-cloud-arrow-up"></i> Simpan Ke Database Cloud
+            <button onclick="saveItem()" id="btn-save" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 rounded text-sm transition">
+                Simpan Data Online
             </button>
         </div>
 
-        <!-- Daftar Stok Ikan (Realtime) -->
+        <!-- Daftar Stok -->
         <div class="space-y-2">
-            <div class="flex justify-between items-center px-1">
-                <h2 class="font-bold text-slate-700 text-sm flex items-center gap-2">
-                    <i class="fa-solid fa-boxes-stacked text-blue-600"></i> Daftar Stok Ikan Online
-                </h2>
-                <span id="total-items" class="text-xs bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full font-medium">0 Jenis</span>
-            </div>
-
+            <h2 class="font-bold text-gray-700 text-sm">Daftar Stok Ikan (Online)</h2>
             <div id="stock-list" class="space-y-2">
-                <div class="text-center py-8 text-slate-400 text-xs">
-                    <i class="fa-solid fa-spinner fa-spin text-xl mb-2 block"></i> Memuat data stok dari server...
-                </div>
+                <div class="text-center py-6 text-gray-400 text-xs">Memuat data...</div>
             </div>
         </div>
 
     </div>
 
-    <!-- Script Logika & Database -->
+    <!-- Script Online -->
     <script>
-        // Konfigurasi Database Firebase Publik (Siap Pakai Tanpa Setup)
         const firebaseConfig = {
             databaseURL: "https://store-ikan-default-rtdb.asia-southeast1.firebasedatabase.app/"
         };
         
-        // Inisialisasi Firebase jika belum
         if (!firebase.apps.length) {
             firebase.initializeApp(firebaseConfig);
         }
@@ -108,156 +85,105 @@
         let currentStoreCode = "STORE-IKAN-01";
         let dbRef = null;
 
-        // Ambil elemen DOM
-        const statusDot = document.getElementById('status-dot');
-        const statusText = document.getElementById('status-text');
-        const stockList = document.getElementById('stock-list');
-
-        function setStatus(online, msg) {
-            if (online) {
-                statusDot.className = "w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse";
-                statusText.innerText = msg || "Online (Realtime)";
-            } else {
-                statusDot.className = "w-2 h-2 rounded-full bg-rose-400 inline-block";
-                statusText.innerText = msg || "Terputus";
-            }
-        }
-
         function connectStore() {
             const inputCode = document.getElementById('store-code').value.trim();
-            if (!inputCode) {
-                alert("Kode Toko tidak boleh kosong!");
-                return;
-            }
-            
-            // Bersihkan listener lama jika ada
+            if (!inputCode) return alert("Kode Toko wajib diisi!");
+
             if (dbRef) dbRef.off();
 
-            currentStoreCode = inputCode.replace(/[^a-zA-Z0-9_-]/g, '_'); // Sanitasi ID
-            setStatus(false, "Menghubungkan...");
+            currentStoreCode = inputCode.replace(/[^a-zA-Z0-9_-]/g, '_');
+            document.getElementById('status-badge').innerText = "Menghubungkan...";
 
-            // Hubungkan ke path toko
             dbRef = db.ref('stores/' + currentStoreCode + '/items');
 
-            // Dengarkan perubahan data secara REALTIME
             dbRef.on('value', (snapshot) => {
-                setStatus(true, "Online (Realtime)");
+                document.getElementById('status-badge').innerText = "Online (Realtime)";
                 renderStock(snapshot.val());
-            }, (error) => {
-                setStatus(false, "Error Koneksi");
-                console.error(error);
+            }, (err) => {
+                document.getElementById('status-badge').innerText = "Gagal Konek";
             });
         }
 
-        // Render daftar stok ke layar HP
         function renderStock(data) {
+            const stockList = document.getElementById('stock-list');
             if (!data) {
-                stockList.innerHTML = `
-                    <div class="bg-white p-6 rounded-xl text-center text-slate-400 text-xs border border-dashed border-slate-300">
-                        <i class="fa-solid fa-box-open text-2xl mb-1 text-slate-300 block"></i>
-                        Belum ada data stok tersimpan untuk toko ini.
-                    </div>`;
-                document.getElementById('total-items').innerText = '0 Jenis';
+                stockList.innerHTML = `<div class="bg-white p-4 rounded text-center text-gray-400 text-xs border">Belum ada data stok tersimpan.</div>`;
                 return;
             }
 
             const keys = Object.keys(data);
-            document.getElementById('total-items').innerText = `${keys.length} Jenis`;
-            
             let html = '';
             keys.reverse().forEach(key => {
                 const item = data[key];
-                const imageHtml = item.photo ? 
-                    `<img src="${item.photo}" class="w-16 h-16 object-cover rounded-lg border border-slate-200">` : 
-                    `<div class="w-16 h-16 bg-slate-100 rounded-lg flex items-center justify-center text-slate-300 border border-slate-200"><i class="fa-solid fa-fish text-2xl"></i></div>`;
+                const photoHtml = item.photo ? `<img src="${item.photo}" class="w-14 h-14 object-cover rounded border">` : `<div class="w-14 h-14 bg-gray-200 rounded flex items-center justify-center text-gray-400 text-xs">No Pic</div>`;
 
                 html += `
-                    <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-200 flex gap-3 items-center">
-                        ${imageHtml}
-                        <div class="flex-1 min-w-0">
-                            <h3 class="font-bold text-slate-800 text-sm truncate">${item.name}</h3>
-                            <div class="flex gap-3 text-xs text-slate-600 mt-1">
-                                <span class="bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-semibold">${item.weight || 0} Kg</span>
-                                <span class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-semibold">${item.count || 0} Ekor</span>
-                            </div>
-                            <p class="text-[10px] text-slate-400 mt-1">Diupdate: ${item.updatedAt || '-'}</p>
+                    <div class="bg-white p-3 rounded shadow-sm border flex gap-3 items-center">
+                        ${photoHtml}
+                        <div class="flex-1">
+                            <h3 class="font-bold text-gray-800 text-sm">${item.name}</h3>
+                            <p class="text-xs text-gray-600">${item.weight || 0} Kg | ${item.count || 0} Ekor</p>
+                            <p class="text-[10px] text-gray-400 mt-0.5">${item.updatedAt || ''}</p>
                         </div>
-                        <button onclick="deleteItem('${key}')" class="text-rose-400 hover:text-rose-600 p-2 text-sm transition">
-                            <i class="fa-solid fa-trash-can"></i>
-                        </button>
+                        <button onclick="deleteItem('${key}')" class="text-red-500 p-2 text-xs font-semibold">Hapus</button>
                     </div>
                 `;
             });
-
             stockList.innerHTML = html;
         }
 
-        // Simpan Item ke Cloud
         function saveItem() {
             const name = document.getElementById('fish-name').value.trim();
             const weight = document.getElementById('fish-weight').value;
             const count = document.getElementById('fish-count').value;
             const photoInput = document.getElementById('fish-photo');
 
-            if (!name) {
-                alert("Masukkan nama ikan terlebih dahulu!");
-                return;
-            }
+            if (!name) return alert("Isi nama ikan!");
 
             const btnSave = document.getElementById('btn-save');
             btnSave.disabled = true;
-            btnSave.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...`;
+            btnSave.innerText = "Menyimpan...";
 
             const now = new Date();
             const timeStr = now.toLocaleDateString('id-ID') + ' ' + now.toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'});
 
-            const saveData = (photoBase64 = '') => {
-                const newItemRef = dbRef.push();
-                newItemRef.set({
+            const sendData = (photoBase64 = '') => {
+                dbRef.push({
                     name: name,
                     weight: weight || 0,
                     count: count || 0,
                     photo: photoBase64,
                     updatedAt: timeStr
                 }).then(() => {
-                    // Reset Form
                     document.getElementById('fish-name').value = '';
                     document.getElementById('fish-weight').value = '';
                     document.getElementById('fish-count').value = '';
                     document.getElementById('fish-photo').value = '';
-                    
                     btnSave.disabled = false;
-                    btnSave.innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> Simpan Ke Database Cloud`;
-                }).catch((err) => {
-                    alert("Gagal menyimpan data: " + err.message);
+                    btnSave.innerText = "Simpan Data Online";
+                }).catch(err => {
+                    alert("Gagal: " + err.message);
                     btnSave.disabled = false;
-                    btnSave.innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> Simpan Ke Database Cloud`;
+                    btnSave.innerText = "Simpan Data Online";
                 });
             };
 
-            // Jika ada foto, ubah ke Base64 gambar kecil
             if (photoInput.files && photoInput.files[0]) {
                 const reader = new FileReader();
-                reader.onload = function(e) {
-                    saveData(e.target.result);
-                };
+                reader.onload = (e) => sendData(e.target.result);
                 reader.readAsDataURL(photoInput.files[0]);
             } else {
-                saveData('');
+                sendData('');
             }
         }
 
-        // Hapus Data dari Cloud
         function deleteItem(key) {
-            if (confirm("Hapus data stok ikan ini dari database?")) {
+            if (confirm("Hapus data ini?")) {
                 dbRef.child(key).remove();
             }
         }
 
-        // Jalankan koneksi awal saat halaman terbuka
-        window.onload = function() {
-            connectStore();
-        };
+        window.onload = connectStore;
     </script>
 </body>
 </html>
