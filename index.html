@@ -192,21 +192,19 @@
             <img id="modalPreviewImg" src="" alt="Preview Foto" class="w-full h-auto max-h-[80vh] object-contain rounded-xl">
         </div>
     </div>
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSy...", 
+        authDomain: "ikan-heng.firebaseapp.com",
+        databaseURL: "https://ikan-heng-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "ikan-heng",
+        storageBucket: "ikan-heng.appspot.com",
+        messagingSenderId: "1234567890", 
+        appId: "1:1234567890:web:..." 
+    };
 
-    <script>
-        const firebaseConfig = {
-      const firebaseConfig = {
-    apiKey: "API_KEY_ASLI_DARI_FIREBASE",
-    authDomain: "ikan-heng.firebaseapp.com",
-    databaseURL: "https://ikan-heng-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "ikan-heng",
-    storageBucket: "ikan-heng.appspot.com",
-    messagingSenderId: "NOMOR_SENDER_ANDA",
-    appId: "APP_ID_ANDA"
-};
-        };
-        
-        let db = null, dbListenerRef = null;
+    let db = null, dbListenerRef = null;
+    
         const myDeviceId = 'device_' + Math.random().toString(36).substring(2, 9);
         let isInitialLoad = true;
         let capturedCameraBase64 = null;
