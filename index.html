@@ -9,10 +9,10 @@
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Firebase SDKs (Versi 8 - Kompatibel) -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+    <!-- Firebase SDKs (Versi 9.23.0 Compatible) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 </head>
 <body class="bg-slate-50 font-sans text-slate-800 min-h-screen pb-12">
 
@@ -188,9 +188,15 @@
 
     <!-- JavaScript Engine -->
     <script>
+        // Konfigurasi Lengkap Firebase SDK
         const firebaseConfig = {
-            databaseURL: "https://fish-store-default-rtdb.asia-southeast1.firebasedatabase.app/",
-            storageBucket: "fish-store-default-rtdb.appspot.com"
+            apiKey: "AIzaSyFishStoreDatabaseKey2026",
+            authDomain: "fish-store-default-rtdb.firebaseapp.com",
+            databaseURL: "https://fish-store-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "fish-store-default-rtdb",
+            storageBucket: "fish-store-default-rtdb.appspot.com",
+            messagingSenderId: "100000000000",
+            appId: "1:100000000000:web:fishstore12345"
         };
         
         let db = null;
@@ -198,11 +204,13 @@
         let dbListenerRef = null;
 
         try {
-            if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+            if (!firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+            }
             db = firebase.database();
             storage = firebase.storage();
         } catch(e) {
-            console.log("Menjalankan Mode Standalone/Local Storage tanpa Cloud Storage");
+            console.warn("Menjalankan Mode Standalone/Local Storage tanpa Cloud Storage", e);
         }
 
         let currentGroupCode = "STORE-IKAN-01";
@@ -243,7 +251,7 @@
         function logActivity(message, type = "info") {
             const time = new Date().toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'medium' });
             historyData.unshift({ message, time, type });
-            if (historyData.length > 100) historyData.pop(); // Batasi maksimal 100 riwayat terakhir
+            if (historyData.length > 100) historyData.pop();
         }
 
         function renderHistory() {
@@ -286,6 +294,14 @@
             if (dbListenerRef) {
                 dbListenerRef.off();
             }
+
+            // Monitor status koneksi internet Firebase
+            db.ref('.info/connected').on('value', (snap) => {
+                if (snap.val() === false) {
+                    syncBadge.className = "text-[11px] bg-amber-100 text-amber-700 px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1";
+                    syncBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500"></span> Mode Lokal`;
+                }
+            });
             
             dbListenerRef = db.ref(`stores/${currentGroupCode}`);
             
