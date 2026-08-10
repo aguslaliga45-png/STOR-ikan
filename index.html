@@ -3,107 +3,89 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>STORE IKAN - Catatan Stok & Pemotongan</title>
-    <!-- Tailwind CSS CDN -->
+    <title>STORE IKAN - Catatan Stok</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Firebase SDKs (Versi 9.23.0 Compatible) -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 </head>
-<body class="bg-slate-50 font-sans text-slate-800 min-h-screen pb-12 relative">
+<body class="bg-slate-50 font-sans text-slate-800 min-h-screen pb-12">
 
-    <!-- Container Toast Notification (Pop-up Realtime) -->
     <div id="toastContainer" class="fixed top-16 right-4 z-50 flex flex-col gap-2 max-w-xs w-full pointer-events-none"></div>
 
-    <!-- Header Banner -->
     <header class="bg-blue-700 text-white p-4 shadow-md sticky top-0 z-40">
         <div class="max-w-xl mx-auto flex justify-between items-center">
             <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-2xl bg-cyan-400 flex items-center justify-center text-xl shadow-inner">
-                    🐟
-                </div>
+                <div class="w-10 h-10 rounded-2xl bg-cyan-400 flex items-center justify-center text-xl">🐟</div>
                 <div>
-                    <h1 class="text-lg font-black tracking-wide leading-none">STORE IKAN</h1>
-                    <p class="text-[11px] text-blue-100 font-medium mt-1">Pencatatan Stok & Pemotongan Online</p>
+                    <h1 class="text-lg font-black leading-none">STORE IKAN</h1>
+                    <p class="text-[11px] text-blue-100 mt-1">Stok & Pemotongan Online</p>
                 </div>
             </div>
-            <div class="flex items-center gap-2">
-                <button onclick="backupData()" class="bg-blue-600 hover:bg-blue-800 text-white text-xs px-3 py-2 rounded-xl font-semibold flex items-center gap-1.5 shadow border border-blue-500">
-                    <i class="fa-solid fa-download"></i> Backup
-                </button>
-                <button onclick="shareGroupCode()" class="bg-cyan-400 hover:bg-cyan-500 text-blue-950 text-xs px-3 py-2 rounded-xl font-bold flex items-center gap-1.5 shadow">
-                    <i class="fa-solid fa-share-nodes"></i> Bagikan Kode
-                </button>
+            <div class="flex gap-2 text-xs">
+                <button onclick="backupData()" class="bg-blue-600 hover:bg-blue-800 text-white px-3 py-2 rounded-xl font-semibold border border-blue-500"><i class="fa-solid fa-download"></i> Backup</button>
+                <button onclick="shareGroupCode()" class="bg-cyan-400 hover:bg-cyan-500 text-blue-950 px-3 py-2 rounded-xl font-bold"><i class="fa-solid fa-share-nodes"></i> Bagikan</button>
             </div>
         </div>
     </header>
 
     <main class="max-w-xl mx-auto p-3.5 space-y-4">
 
-        <!-- Status Mode Penyimpanan & Sync -->
-        <div class="bg-white border border-slate-200 rounded-2xl p-3 shadow-sm flex justify-between items-center">
+        <div class="bg-white border rounded-2xl p-3 shadow-sm flex justify-between items-center text-xs">
             <div class="flex items-center gap-2">
-                <i class="fa-solid fa-server text-blue-600 text-sm"></i>
-                <span class="text-xs font-semibold text-slate-600">Kode Toko:</span>
-                <input type="text" id="groupCodeInput" value="STORE-IKAN-01" class="font-mono text-xs font-bold text-blue-700 bg-slate-100 px-2 py-1 rounded-lg w-32 uppercase border border-slate-200 focus:outline-none">
-                <button onclick="changeGroupCode()" class="text-xs text-blue-600 hover:underline font-bold">Ganti</button>
+                <i class="fa-solid fa-server text-blue-600"></i>
+                <span class="font-semibold text-slate-600">Kode:</span>
+                <input type="text" id="groupCodeInput" value="STORE-IKAN-01" class="font-mono font-bold text-blue-700 bg-slate-100 px-2 py-1 rounded-lg w-32 uppercase border focus:outline-none">
+                <button onclick="changeGroupCode()" class="text-blue-600 hover:underline font-bold">Ganti</button>
             </div>
-            <span id="syncBadge" class="text-[11px] bg-amber-100 text-amber-700 px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1">
+            <span id="syncBadge" class="bg-amber-100 text-amber-700 px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1 text-[11px]">
                 <span class="w-2 h-2 rounded-full bg-amber-500"></span> Mode Lokal
             </span>
         </div>
 
-        <!-- 5 Grid Statistik Dashboard -->
         <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            <div class="bg-white p-3.5 rounded-2xl border border-slate-200/80 text-center shadow-sm">
-                <p class="text-xs font-semibold text-slate-500">Total Box/Item</p>
+            <div class="bg-white p-3.5 rounded-2xl border text-center shadow-sm">
+                <p class="text-xs font-semibold text-slate-500">Total Box</p>
                 <p id="statTotalBox" class="text-2xl font-black text-slate-800 mt-1">0</p>
             </div>
-            <div class="bg-white p-3.5 rounded-2xl border border-blue-200/80 text-center shadow-sm">
-                <p class="text-xs font-semibold text-blue-600">Total IN (Masuk)</p>
+            <div class="bg-white p-3.5 rounded-2xl border border-blue-200 text-center shadow-sm">
+                <p class="text-xs font-semibold text-blue-600">Total IN</p>
                 <p id="statTotalIN" class="text-2xl font-black text-blue-700 mt-1">0.000 Kg</p>
             </div>
-            <div class="bg-white p-3.5 rounded-2xl border border-amber-200/70 text-center shadow-sm">
-                <p class="text-xs font-semibold text-amber-600">Di-CUT (Potong)</p>
+            <div class="bg-white p-3.5 rounded-2xl border border-amber-200 text-center shadow-sm">
+                <p class="text-xs font-semibold text-amber-600">Di-CUT</p>
                 <p id="statTotalCut" class="text-2xl font-black text-amber-600 mt-1">0 Box</p>
             </div>
-            <div class="bg-white p-3.5 rounded-2xl border border-rose-200/70 text-center shadow-sm">
-                <p class="text-xs font-semibold text-rose-600">Total OUT (Keluar)</p>
+            <div class="bg-white p-3.5 rounded-2xl border border-rose-200 text-center shadow-sm">
+                <p class="text-xs font-semibold text-rose-600">Total OUT</p>
                 <p id="statTotalOUT" class="text-2xl font-black text-rose-600 mt-1">0.000 Kg</p>
             </div>
-            <div class="bg-white p-3.5 rounded-2xl border border-emerald-200/70 text-center shadow-sm col-span-2 sm:col-span-1">
+            <div class="bg-white p-3.5 rounded-2xl border border-emerald-200 text-center shadow-sm col-span-2 sm:col-span-1">
                 <p class="text-xs font-semibold text-emerald-600">Stok Tersedia</p>
                 <p id="statStokKg" class="text-2xl font-black text-emerald-600 mt-1">0.000 Kg</p>
             </div>
         </div>
 
-        <!-- Search & Button Modal Tambah -->
-        <div class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+        <div class="bg-white p-3.5 rounded-2xl border shadow-sm space-y-3">
             <div class="relative">
                 <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-400 text-sm"></i>
-                <input type="text" id="searchInput" oninput="renderTable()" placeholder="Cari No. Box..." class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <input type="text" id="searchInput" oninput="renderTable()" placeholder="Cari No. Box..." class="w-full pl-9 pr-3 py-2 bg-slate-50 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
             </div>
-            <button onclick="openModal()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl shadow transition text-sm flex items-center justify-center gap-2">
+            <button onclick="openModal()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl text-sm flex items-center justify-center gap-2">
                 <i class="fa-solid fa-plus"></i> Tambah Entry Box
             </button>
         </div>
 
-        <!-- Tabel Penyimpanan Ikan -->
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            <div class="p-3 bg-slate-50 border-b flex justify-between items-center">
-                <h3 class="font-bold text-slate-800 text-sm flex items-center gap-2">
-                    <i class="fa-solid fa-table-cells text-blue-600"></i> Tabel Penyimpanan Ikan
-                </h3>
-                <span id="itemCountBadge" class="bg-slate-200 text-slate-700 text-xs px-2.5 py-0.5 rounded-full font-semibold">0 Data</span>
+        <div class="bg-white rounded-2xl border shadow-sm overflow-hidden">
+            <div class="p-3 bg-slate-50 border-b flex justify-between items-center text-sm font-bold">
+                <span class="flex items-center gap-2"><i class="fa-solid fa-table-cells text-blue-600"></i> Tabel Penyimpanan</span>
+                <span id="itemCountBadge" class="bg-slate-200 text-slate-700 text-xs px-2.5 py-0.5 rounded-full">0 Data</span>
             </div>
-
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-xs">
-                    <thead class="bg-slate-100 text-slate-600 border-b uppercase font-bold text-[10px] tracking-wider">
+                    <thead class="bg-slate-100 text-slate-600 border-b uppercase text-[10px]">
                         <tr>
                             <th class="py-3 px-3 text-center">NO</th>
                             <th class="py-3 px-3 text-center">FOTO</th>
@@ -113,97 +95,75 @@
                             <th class="py-3 px-3 text-center">AKSI</th>
                         </tr>
                     </thead>
-                    <tbody id="inventoryTable" class="divide-y divide-slate-100 font-medium text-slate-700">
-                        <!-- Data Dinamis -->
-                    </tbody>
+                    <tbody id="inventoryTable" class="divide-y font-medium text-slate-700"></tbody>
                 </table>
             </div>
         </div>
 
-        <!-- Section Riwayat / History Aktivitas -->
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-3">
+        <div class="bg-white rounded-2xl border shadow-sm p-4 space-y-3">
             <div class="flex justify-between items-center border-b pb-2">
-                <h3 class="font-bold text-slate-800 text-sm flex items-center gap-2">
-                    <i class="fa-solid fa-clock-rotate-left text-blue-600"></i> Riwayat Aktivitas (History)
-                </h3>
+                <h3 class="font-bold text-sm flex items-center gap-2"><i class="fa-solid fa-clock-rotate-left text-blue-600"></i> History</h3>
                 <button onclick="clearHistory()" class="text-[11px] text-rose-600 hover:underline font-semibold flex items-center gap-1">
-                    <i class="fa-regular fa-trash-can"></i> Bersihkan History
+                    <i class="fa-regular fa-trash-can"></i> Bersihkan
                 </button>
             </div>
-            
-            <div id="historyList" class="space-y-2 max-h-60 overflow-y-auto text-xs pr-1 divide-y divide-slate-100">
-                <!-- Data History Dinamis -->
-            </div>
+            <div id="historyList" class="space-y-2 max-h-60 overflow-y-auto text-xs pr-1 divide-y"></div>
         </div>
 
     </main>
 
-    <!-- Hidden Input File untuk Upload Foto dari Tabel -->
     <input type="file" id="directTableFileInput" accept="image/*" class="hidden" onchange="handleDirectTableUpload(event)">
 
-    <!-- Modal Form Input -->
     <div id="boxModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
         <div class="bg-white rounded-2xl max-w-md w-full p-4 shadow-xl space-y-4">
             <div class="flex justify-between items-center border-b pb-2">
-                <h3 id="modalTitle" class="font-bold text-slate-800 text-base">Tambah Entry Box</h3>
-                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 text-lg">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
+                <h3 id="modalTitle" class="font-bold text-base">Tambah Entry Box</h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
             </div>
 
-            <form id="boxForm" onsubmit="saveBoxData(event)" class="space-y-3">
-                <input type="hidden" id="editKey" value="">
+            <form id="boxForm" onsubmit="saveBoxData(event)" class="space-y-3 text-xs">
+                <input type="hidden" id="editKey">
 
                 <div>
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">No. Box / ID</label>
-                    <input type="text" id="boxNo" required class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Misal: 11">
+                    <label class="block font-semibold mb-1">No. Box / ID</label>
+                    <input type="text" id="boxNo" required class="w-full px-3 py-2 bg-slate-50 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Misal: 11">
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">Jumlah IN (Kg)</label>
-                    <input type="number" step="0.001" id="boxWeight" required class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Misal: 9.400">
+                    <label class="block font-semibold mb-1">Jumlah IN (Kg)</label>
+                    <input type="number" step="0.001" id="boxWeight" required class="w-full px-3 py-2 bg-slate-50 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Misal: 9.400">
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">Upload Foto Ikan (Opsional)</label>
-                    <input type="file" id="boxPhoto" accept="image/*" class="w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700">
-                    <input type="hidden" id="existingPhoto" value="">
+                    <label class="block font-semibold mb-1">Upload Foto (Opsional)</label>
+                    <input type="file" id="boxPhoto" accept="image/*" class="w-full text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:bg-blue-50 file:text-blue-700">
+                    <input type="hidden" id="existingPhoto">
                 </div>
 
                 <div class="flex items-center gap-6 py-2">
-                    <label class="inline-flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" id="isCut" class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
-                        <span class="text-xs font-bold text-blue-700">Di-CUT (Potong)</span>
+                    <label class="inline-flex items-center gap-2 cursor-pointer font-bold text-blue-700">
+                        <input type="checkbox" id="isCut" class="w-4 h-4 text-blue-600 rounded"> Di-CUT
                     </label>
-                    <label class="inline-flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" id="isOut" class="w-4 h-4 text-rose-600 rounded focus:ring-rose-500">
-                        <span class="text-xs font-bold text-rose-600">OUT (Keluar)</span>
+                    <label class="inline-flex items-center gap-2 cursor-pointer font-bold text-rose-600">
+                        <input type="checkbox" id="isOut" class="w-4 h-4 text-rose-600 rounded"> OUT
                     </label>
                 </div>
 
                 <div class="flex gap-2 pt-2">
-                    <button type="button" onclick="closeModal()" class="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-2.5 rounded-xl text-xs">
-                        Batal
-                    </button>
-                    <button type="submit" id="submitBtn" class="w-1/2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl text-xs shadow flex items-center justify-center gap-2">
-                        <span>Simpan Barang</span>
-                    </button>
+                    <button type="button" onclick="closeModal()" class="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-2.5 rounded-xl">Batal</button>
+                    <button type="submit" id="submitBtn" class="w-1/2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl shadow">Simpan</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Modal View Foto Ukuran Penuh -->
     <div id="imagePreviewModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md hidden items-center justify-center p-4 z-50" onclick="closeImagePreview()">
         <div class="relative max-w-lg w-full bg-white rounded-2xl overflow-hidden p-2 shadow-2xl" onclick="event.stopPropagation()">
-            <button onclick="closeImagePreview()" class="absolute top-3 right-3 bg-slate-800/70 hover:bg-slate-900 text-white w-8 h-8 rounded-full flex items-center justify-center z-10 transition">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
-            <img id="modalPreviewImg" src="" alt="Preview Foto Ikan" class="w-full h-auto max-h-[80vh] object-contain rounded-xl">
+            <button onclick="closeImagePreview()" class="absolute top-3 right-3 bg-slate-800/70 hover:bg-slate-900 text-white w-8 h-8 rounded-full flex items-center justify-center z-10"><i class="fa-solid fa-xmark"></i></button>
+            <img id="modalPreviewImg" src="" alt="Preview Foto" class="w-full h-auto max-h-[80vh] object-contain rounded-xl">
         </div>
     </div>
 
-    <!-- JavaScript Engine -->
     <script>
         const firebaseConfig = {
             apiKey: "AIzaSyFishStoreDatabaseKey2026",
@@ -215,19 +175,184 @@
             appId: "1:100000000000:web:fishstore12345"
         };
         
-        let db = null;
-        let storage = null;
-        let dbListenerRef = null;
-
-        // ID Unik untuk HP Ini agar tidak memicu notifikasi pada diri sendiri
+        let db = null, storage = null, dbListenerRef = null;
         const myDeviceId = 'device_' + Math.random().toString(36).substring(2, 9);
         let isInitialLoad = true;
 
         try {
-            if (!firebase.apps.length) {
-                firebase.initializeApp(firebaseConfig);
-            }
+            if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
             db = firebase.database();
             storage = firebase.storage();
         } catch(e) {
-            console.warn("Menjalankan Mode Standalone/Local Stora
+            console.warn("Mode Standalone/Local Storage", e);
+        }
+
+        let currentGroupCode = "STORE-IKAN-01", localData = {}, historyData = [], activeTargetKeyForUpload = null;
+
+        if (localStorage.getItem('fishStoreGroupCode')) {
+            currentGroupCode = localStorage.getItem('fishStoreGroupCode');
+            document.getElementById('groupCodeInput').value = currentGroupCode;
+        }
+
+        loadLocalData();
+        connectToOnlineDatabase();
+
+        function showNotification(title, message, type = "success") {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            let bgClass = type === "info" ? "bg-blue-600" : (type === "warning" ? "bg-amber-600" : "bg-emerald-600");
+            let icon = type === "info" ? "fa-circle-info" : (type === "warning" ? "fa-triangle-exclamation" : "fa-bell");
+
+            toast.className = `${bgClass} text-white p-3 rounded-2xl shadow-xl flex items-start gap-3 pointer-events-auto transition-all duration-300 transform -translate-y-2 opacity-0`;
+            toast.innerHTML = `
+                <div class="mt-0.5 text-base"><i class="fa-solid ${icon}"></i></div>
+                <div class="flex-1">
+                    <p class="font-bold text-xs leading-tight">${title}</p>
+                    <p class="text-[11px] opacity-90 mt-0.5 leading-snug">${message}</p>
+                </div>
+                <button onclick="this.parentElement.remove()" class="text-white/80 hover:text-white text-xs"><i class="fa-solid fa-xmark"></i></button>`;
+
+            container.appendChild(toast);
+            setTimeout(() => toast.classList.remove('-translate-y-2', 'opacity-0'), 10);
+            setTimeout(() => {
+                toast.classList.add('opacity-0', '-translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        function loadLocalData() {
+            localData = JSON.parse(localStorage.getItem(`store_data_${currentGroupCode}`) || '{}');
+            historyData = JSON.parse(localStorage.getItem(`store_history_${currentGroupCode}`) || '[]');
+            renderTable();
+            calculateStats();
+            renderHistory();
+        }
+
+        function saveLocalData() {
+            localStorage.setItem(`store_data_${currentGroupCode}`, JSON.stringify(localData));
+            localStorage.setItem(`store_history_${currentGroupCode}`, JSON.stringify(historyData));
+            renderTable();
+            calculateStats();
+            renderHistory();
+            syncToOnline();
+        }
+
+        function syncToOnline() {
+            if (!db) return;
+            db.ref(`stores/${currentGroupCode}`).set({
+                data: localData,
+                history: historyData,
+                lastUpdatedBy: myDeviceId,
+                updatedAt: new Date().toISOString()
+            }).catch(err => console.error("Error Sync Online:", err));
+        }
+
+        function logActivity(message, type = "info") {
+            const time = new Date().toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'medium' });
+            historyData.unshift({ message, time, type });
+            if (historyData.length > 100) historyData.pop();
+        }
+
+        function renderHistory() {
+            const historyContainer = document.getElementById('historyList');
+            if (!historyData.length) {
+                historyContainer.innerHTML = `<p class="text-center text-slate-400 py-4">Belum ada riwayat aktivitas.</p>`;
+                return;
+            }
+
+            historyContainer.innerHTML = historyData.map(item => {
+                let iconClass = item.type === "add" ? "fa-circle-plus text-emerald-500" : (item.type === "edit" ? "fa-pen-to-square text-amber-500" : (item.type === "delete" ? "fa-trash-can text-rose-500" : "fa-circle-info text-blue-500"));
+                return `
+                <div class="pt-2 pb-1 flex justify-between items-start gap-2">
+                    <div class="flex items-start gap-2">
+                        <i class="fa-solid ${iconClass} mt-0.5"></i>
+                        <span class="font-medium text-slate-700">${item.message}</span>
+                    </div>
+                    <span class="text-[10px] text-slate-400 whitespace-nowrap">${item.time}</span>
+                </div>`;
+            }).join('');
+        }
+
+        function clearHistory() {
+            if (confirm("Apakah Anda yakin ingin menghapus semua riwayat aktivitas?")) {
+                historyData = [];
+                logActivity("Membuat riwayat baru (dikosongkan)", "delete");
+                saveLocalData();
+            }
+        }
+
+        function connectToOnlineDatabase() {
+            if (!db) return;
+            const syncBadge = document.getElementById('syncBadge');
+            isInitialLoad = true;
+
+            if (dbListenerRef) dbListenerRef.off();
+
+            db.ref('.info/connected').on('value', snap => {
+                if (snap.val() === true) {
+                    syncBadge.className = "text-[11px] bg-emerald-100 text-emerald-700 px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1";
+                    syncBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Online Sync`;
+                } else {
+                    syncBadge.className = "text-[11px] bg-amber-100 text-amber-700 px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1";
+                    syncBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500"></span> Mode Lokal`;
+                }
+            });
+            
+            dbListenerRef = db.ref(`stores/${currentGroupCode}`);
+            dbListenerRef.on('value', snapshot => {
+                const onlineVal = snapshot.val();
+                if (onlineVal) {
+                    if (!isInitialLoad && onlineVal.lastUpdatedBy && onlineVal.lastUpdatedBy !== myDeviceId) {
+                        const msg = onlineVal.history?.[0]?.message || "Ada pembaruan data stok ikan!";
+                        showNotification("Pembaruan Masuk! 🐟", msg, "success");
+                    }
+                    localData = onlineVal.data || {};
+                    historyData = onlineVal.history || [];
+                    localStorage.setItem(`store_data_${currentGroupCode}`, JSON.stringify(localData));
+                    localStorage.setItem(`store_history_${currentGroupCode}`, JSON.stringify(historyData));
+                    renderTable();
+                    calculateStats();
+                    renderHistory();
+                } else {
+                    syncToOnline();
+                }
+                isInitialLoad = false;
+            });
+        }
+
+        function changeGroupCode() {
+            const newCode = document.getElementById('groupCodeInput').value.trim().toUpperCase();
+            if (newCode) {
+                currentGroupCode = newCode;
+                localStorage.setItem('fishStoreGroupCode', currentGroupCode);
+                showNotification("Kode Toko Diubah", `Sekarang terhubung ke kode: ${currentGroupCode}`, "info");
+                loadLocalData();
+                connectToOnlineDatabase();
+            }
+        }
+
+        function shareGroupCode() {
+            if (navigator.share) {
+                navigator.share({
+                    title: 'STORE IKAN',
+                    text: `Kode Toko untuk Sinkronisasi Stok: ${currentGroupCode}`,
+                }).catch(() => {});
+            } else {
+                navigator.clipboard.writeText(currentGroupCode);
+                showNotification("Kode Disalin!", `Kode ${currentGroupCode} berhasil disalin ke clipboard.`, "info");
+            }
+        }
+
+        function backupData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ data: localData, history: historyData }));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `backup_store_ikan_${currentGroupCode}_${new Date().toISOString().slice(0,10)}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('inventoryTable');
+            const searchVal = document.getElementById('searchI
