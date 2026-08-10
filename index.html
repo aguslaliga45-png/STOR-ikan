@@ -3,37 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>STORE IKAN - Catatan Stok</title>
+    <title>STORE IKAN - Catatan Stok Realtime</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 </head>
 <body class="bg-slate-50 font-sans text-slate-800 min-h-screen pb-12">
 
-    <!-- Screen Login Google -->
+    <!-- Screen Masuk Tim / Online Sync -->
     <div id="loginScreen" class="fixed inset-0 bg-slate-900/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl space-y-6">
+        <div class="bg-white rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl space-y-5">
             <div class="w-16 h-16 rounded-3xl bg-cyan-400 mx-auto flex items-center justify-center text-3xl shadow-lg">🐟</div>
             <div>
-                <h2 class="text-xl font-black text-slate-800">STORE IKAN</h2>
-                <p class="text-xs text-slate-500 mt-1">Sistem Catatan Stok & Pemotongan Online</p>
+                <h2 class="text-xl font-black text-slate-800">STORE IKAN ONLINE</h2>
+                <p class="text-xs text-slate-500 mt-1">Masukkan Kode Toko untuk Hubungkan HP</p>
             </div>
-            <div class="space-y-3">
-                <p class="text-xs font-semibold text-slate-600">Sila log masuk menggunakan akaun Google anda untuk meneruskan:</p>
-                <button onclick="loginWithGoogle()" class="w-full bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 font-bold py-3 px-4 rounded-xl text-sm flex items-center justify-center gap-3 shadow-sm transition active:scale-95">
-                    <svg class="w-5 h-5" viewBox="0 0 24 24">
-                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-                    </svg>
-                    Log Masuk dengan Google
+            
+            <form onsubmit="connectOnlineStore(event)" class="space-y-3">
+                <div>
+                    <label class="block text-left text-xs font-bold text-slate-600 mb-1">Kode Toko Bersama:</label>
+                    <input type="text" id="accessCodeInput" placeholder="Contoh: TOKO-IKAN-01" required uppercase class="w-full text-center text-base font-bold tracking-wider px-4 py-3 bg-slate-100 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 uppercase">
+                </div>
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl text-sm shadow-md transition active:scale-95 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-wifi"></i> Masuk & Hubungkan Data
                 </button>
-            </div>
+            </form>
+            <p class="text-[11px] text-slate-400">Gunakan **Kode Toko** yang sama di HP lain agar datanya otomatis terhubung!</p>
         </div>
     </div>
 
@@ -45,21 +42,14 @@
                 <div class="w-10 h-10 rounded-2xl bg-cyan-400 flex items-center justify-center text-xl">🐟</div>
                 <div>
                     <h1 class="text-lg font-black leading-none">STORE IKAN</h1>
-                    <p class="text-[11px] text-blue-100 mt-1">Stok & Pemotongan Online</p>
+                    <p class="text-[11px] text-blue-100 mt-1">Stok & Pemotongan Realtime</p>
                 </div>
             </div>
             <div class="flex items-center gap-2 text-xs">
-                <!-- User Profile Display -->
-                <div id="userProfile" class="hidden items-center gap-2 bg-blue-800/80 px-2 py-1 rounded-xl border border-blue-600">
-                    <img id="userAvatar" src="" class="w-6 h-6 rounded-full border">
-                    <span id="userName" class="font-bold max-w-[80px] truncate text-[11px]"></span>
-                    <button onclick="logoutGoogle()" title="Log Keluar" class="text-rose-300 hover:text-rose-100 ml-1">
-                        <i class="fa-solid fa-right-from-bracket"></i>
-                    </button>
-                </div>
-
-                <button onclick="backupData()" class="bg-blue-600 hover:bg-blue-800 text-white px-2.5 py-1.5 rounded-xl font-semibold border border-blue-500"><i class="fa-solid fa-download"></i> Backup</button>
-                <button onclick="shareGroupCode()" class="bg-cyan-400 hover:bg-cyan-500 text-blue-950 px-2.5 py-1.5 rounded-xl font-bold"><i class="fa-solid fa-share-nodes"></i> Bagikan</button>
+                <button onclick="disconnectStore()" title="Keluar / Ganti Toko" class="bg-blue-800 hover:bg-blue-900 text-rose-200 px-2.5 py-1.5 rounded-xl font-semibold border border-blue-600">
+                    <i class="fa-solid fa-power-off"></i> Keluar
+                </button>
+                <button onclick="shareGroupCode()" class="bg-cyan-400 hover:bg-cyan-500 text-blue-950 px-2.5 py-1.5 rounded-xl font-bold"><i class="fa-solid fa-share-nodes"></i> Bagikan Kode</button>
             </div>
         </div>
     </header>
@@ -68,13 +58,12 @@
 
         <div class="bg-white border rounded-2xl p-3 shadow-sm flex justify-between items-center text-xs">
             <div class="flex items-center gap-2">
-                <i class="fa-solid fa-server text-blue-600"></i>
-                <span class="font-semibold text-slate-600">Kode:</span>
-                <input type="text" id="groupCodeInput" value="STORE-IKAN-01" class="font-mono font-bold text-blue-700 bg-slate-100 px-2 py-1 rounded-lg w-32 uppercase border focus:outline-none">
-                <button onclick="changeGroupCode()" class="text-blue-600 hover:underline font-bold">Ganti</button>
+                <i class="fa-solid fa-store text-blue-600"></i>
+                <span class="font-semibold text-slate-600">Kode Terhubung:</span>
+                <span id="activeCodeDisplay" class="font-mono font-bold text-blue-700 bg-slate-100 px-2 py-1 rounded-lg">...</span>
             </div>
             <span id="syncBadge" class="bg-amber-100 text-amber-700 px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1 text-[11px]">
-                <span class="w-2 h-2 rounded-full bg-amber-500"></span> Mode Lokal
+                <span class="w-2 h-2 rounded-full bg-amber-500"></span> Connecting...
             </span>
         </div>
 
@@ -106,14 +95,14 @@
                 <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-400 text-sm"></i>
                 <input type="text" id="searchInput" oninput="renderTable()" placeholder="Cari No. Box..." class="w-full pl-9 pr-3 py-2 bg-slate-50 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
             </div>
-            <button onclick="openModal()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl text-sm flex items-center justify-center gap-2">
+            <button onclick="openModal()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl text-sm flex items-center justify-center gap-2 shadow">
                 <i class="fa-solid fa-plus"></i> Tambah Entry Box
             </button>
         </div>
 
         <div class="bg-white rounded-2xl border shadow-sm overflow-hidden">
             <div class="p-3 bg-slate-50 border-b flex justify-between items-center text-sm font-bold">
-                <span class="flex items-center gap-2"><i class="fa-solid fa-table-cells text-blue-600"></i> Tabel Penyimpanan</span>
+                <span class="flex items-center gap-2"><i class="fa-solid fa-table-cells text-blue-600"></i> Tabel Stok Realtime</span>
                 <span id="itemCountBadge" class="bg-slate-200 text-slate-700 text-xs px-2.5 py-0.5 rounded-full">0 Data</span>
             </div>
             <div class="overflow-x-auto">
@@ -135,10 +124,7 @@
 
         <div class="bg-white rounded-2xl border shadow-sm p-4 space-y-3">
             <div class="flex justify-between items-center border-b pb-2">
-                <h3 class="font-bold text-sm flex items-center gap-2"><i class="fa-solid fa-clock-rotate-left text-blue-600"></i> History</h3>
-                <button onclick="clearHistory()" class="text-[11px] text-rose-600 hover:underline font-semibold flex items-center gap-1">
-                    <i class="fa-regular fa-trash-can"></i> Bersihkan
-                </button>
+                <h3 class="font-bold text-sm flex items-center gap-2"><i class="fa-solid fa-clock-rotate-left text-blue-600"></i> Riwayat Perubahan HP Lain</h3>
             </div>
             <div id="historyList" class="space-y-2 max-h-60 overflow-y-auto text-xs pr-1 divide-y"></div>
         </div>
@@ -148,6 +134,7 @@
     <input type="file" id="directTableFileInput" accept="image/*" class="hidden" onchange="handleDirectTableUpload(event)">
     <input type="file" id="directTableCameraInput" accept="image/*" capture="environment" class="hidden" onchange="handleDirectTableUpload(event)">
 
+    <!-- Modal Tambah / Edit -->
     <div id="boxModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
         <div class="bg-white rounded-2xl max-w-md w-full p-4 shadow-xl space-y-4">
             <div class="flex justify-between items-center border-b pb-2">
@@ -169,16 +156,16 @@
                 </div>
 
                 <div>
-                    <label class="block font-semibold mb-1">Upload / Tangkap Foto (Opsional)</label>
+                    <label class="block font-semibold mb-1">Foto Ikan (Opsional)</label>
                     <div class="flex gap-2 items-center">
                         <input type="file" id="boxPhoto" accept="image/*" class="w-full text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:bg-blue-50 file:text-blue-700">
-                        <button type="button" onclick="triggerModalCamera()" title="Ambil Foto Kamera" class="p-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-xl border border-emerald-200 transition shrink-0 flex items-center justify-center">
+                        <button type="button" onclick="triggerModalCamera()" title="Kamera Direct" class="p-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-xl border border-emerald-200 shrink-0">
                             <i class="fa-solid fa-camera text-base"></i>
                         </button>
                     </div>
                     <input type="file" id="boxPhotoCamera" accept="image/*" capture="environment" class="hidden" onchange="handleModalCameraCapture(event)">
                     <input type="hidden" id="existingPhoto">
-                    <p id="photoStatusText" class="text-[10px] text-emerald-600 font-semibold mt-1 hidden"><i class="fa-solid fa-check"></i> Foto kamera sedia digunakan</p>
+                    <p id="photoStatusText" class="text-[10px] text-emerald-600 font-semibold mt-1 hidden"><i class="fa-solid fa-check"></i> Foto kamera siap dipasang</p>
                 </div>
 
                 <div class="flex items-center gap-6 py-2">
@@ -192,12 +179,13 @@
 
                 <div class="flex gap-2 pt-2">
                     <button type="button" onclick="closeModal()" class="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-2.5 rounded-xl">Batal</button>
-                    <button type="submit" id="submitBtn" class="w-1/2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl shadow">Simpan</button>
+                    <button type="submit" id="submitBtn" class="w-1/2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl shadow">Simpan Data</button>
                 </div>
             </form>
         </div>
     </div>
 
+    <!-- Preview Foto -->
     <div id="imagePreviewModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md hidden items-center justify-center p-4 z-50" onclick="closeImagePreview()">
         <div class="relative max-w-lg w-full bg-white rounded-2xl overflow-hidden p-2 shadow-2xl" onclick="event.stopPropagation()">
             <button onclick="closeImagePreview()" class="absolute top-3 right-3 bg-slate-800/70 hover:bg-slate-900 text-white w-8 h-8 rounded-full flex items-center justify-center z-10"><i class="fa-solid fa-xmark"></i></button>
@@ -216,66 +204,47 @@
             appId: "1:100000000000:web:fishstore12345"
         };
         
-        let db = null, auth = null, storage = null, dbListenerRef = null, currentUser = null;
+        let db = null, dbListenerRef = null;
         const myDeviceId = 'device_' + Math.random().toString(36).substring(2, 9);
         let isInitialLoad = true;
         let capturedCameraBase64 = null;
+        let currentGroupCode = localStorage.getItem('fishStoreGroupCode') || "";
+        let localData = {}, historyData = [], activeTargetKeyForUpload = null;
 
         try {
             if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
             db = firebase.database();
-            auth = firebase.auth();
-            storage = firebase.storage();
         } catch(e) {
-            console.warn("Mode Standalone/Local Storage", e);
+            console.warn("Database error", e);
         }
 
-        // Firebase Auth State Observer
-        if (auth) {
-            auth.onAuthStateChanged(user => {
-                if (user) {
-                    currentUser = user;
-                    document.getElementById('loginScreen').classList.add('hidden');
-                    document.getElementById('userProfile').classList.remove('hidden');
-                    document.getElementById('userProfile').classList.add('flex');
-                    document.getElementById('userName').innerText = user.displayName || user.email;
-                    document.getElementById('userAvatar').src = user.photoURL || 'https://via.placeholder.com/40';
-                    loadLocalData();
-                    connectToOnlineDatabase();
-                } else {
-                    currentUser = null;
-                    document.getElementById('loginScreen').classList.remove('hidden');
-                    document.getElementById('userProfile').classList.add('hidden');
-                    document.getElementById('userProfile').classList.remove('flex');
-                }
-            });
+        // Cek apakah HP ini sudah pernah memasukkan Kode Toko
+        if (currentGroupCode) {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('activeCodeDisplay').innerText = currentGroupCode;
+            connectToOnlineDatabase();
         }
 
-        function loginWithGoogle() {
-            if (!auth) {
-                alert("Firebase Auth tidak dikonfigurasi.");
-                return;
-            }
-            const provider = new firebase.auth.GoogleAuthProvider();
-            auth.signInWithPopup(provider).catch(error => {
-                console.error("Gagal Login:", error);
-                showNotification("Gagal Log Masuk", error.message, "warning");
-            });
-        }
-
-        function logoutGoogle() {
-            if (auth && confirm("Adakah anda pasti ingin log keluar?")) {
-                auth.signOut().then(() => {
-                    showNotification("Log Keluar", "Anda telah log keluar.", "info");
-                });
+        function connectOnlineStore(e) {
+            e.preventDefault();
+            const code = document.getElementById('accessCodeInput').value.trim().toUpperCase();
+            if (code) {
+                currentGroupCode = code;
+                localStorage.setItem('fishStoreGroupCode', currentGroupCode);
+                document.getElementById('activeCodeDisplay').innerText = currentGroupCode;
+                document.getElementById('loginScreen').classList.add('hidden');
+                connectToOnlineDatabase();
+                showNotification("Terhubung!", `HP ini terhubung ke Toko: ${currentGroupCode}`, "success");
             }
         }
 
-        let currentGroupCode = "STORE-IKAN-01", localData = {}, historyData = [], activeTargetKeyForUpload = null;
-
-        if (localStorage.getItem('fishStoreGroupCode')) {
-            currentGroupCode = localStorage.getItem('fishStoreGroupCode');
-            document.getElementById('groupCodeInput').value = currentGroupCode;
+        function disconnectStore() {
+            if (confirm("Ingin keluar dari toko ini? Anda bisa masukkan kode toko lain nantinya.")) {
+                localStorage.removeItem('fishStoreGroupCode');
+                currentGroupCode = "";
+                if (dbListenerRef) dbListenerRef.off();
+                document.getElementById('loginScreen').classList.remove('hidden');
+            }
         }
 
         function showNotification(title, message, type = "success") {
@@ -301,17 +270,7 @@
             }, 4000);
         }
 
-        function loadLocalData() {
-            localData = JSON.parse(localStorage.getItem(`store_data_${currentGroupCode}`) || '{}');
-            historyData = JSON.parse(localStorage.getItem(`store_history_${currentGroupCode}`) || '[]');
-            renderTable();
-            calculateStats();
-            renderHistory();
-        }
-
         function saveLocalData() {
-            localStorage.setItem(`store_data_${currentGroupCode}`, JSON.stringify(localData));
-            localStorage.setItem(`store_history_${currentGroupCode}`, JSON.stringify(historyData));
             renderTable();
             calculateStats();
             renderHistory();
@@ -319,10 +278,339 @@
         }
 
         function syncToOnline() {
-            if (!db || !currentUser) return;
+            if (!db || !currentGroupCode) return;
             db.ref(`stores/${currentGroupCode}`).set({
                 data: localData,
                 history: historyData,
-                lastUpdatedBy: currentUser.displayName || myDeviceId,
+                lastUpdatedBy: myDeviceId,
                 updatedAt: new Date().toISOString()
-            }).catch(err => console.error("Error
+            });
+        }
+
+        function logActivity(message, type = "info") {
+            const time = new Date().toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'medium' });
+            historyData.unshift({ message, time, type });
+            if (historyData.length > 100) historyData.pop();
+        }
+
+        function renderHistory() {
+            const historyContainer = document.getElementById('historyList');
+            if (!historyData.length) {
+                historyContainer.innerHTML = `<p class="text-center text-slate-400 py-4">Belum ada aktivitas.</p>`;
+                return;
+            }
+
+            historyContainer.innerHTML = historyData.map(item => {
+                let iconClass = item.type === "add" ? "fa-circle-plus text-emerald-500" : (item.type === "edit" ? "fa-pen-to-square text-amber-500" : (item.type === "delete" ? "fa-trash-can text-rose-500" : "fa-circle-info text-blue-500"));
+                return `
+                <div class="pt-2 pb-1 flex justify-between items-start gap-2">
+                    <div class="flex items-start gap-2">
+                        <i class="fa-solid ${iconClass} mt-0.5"></i>
+                        <span class="font-medium text-slate-700">${item.message}</span>
+                    </div>
+                    <span class="text-[10px] text-slate-400 whitespace-nowrap">${item.time}</span>
+                </div>`;
+            }).join('');
+        }
+
+        function connectToOnlineDatabase() {
+            if (!db || !currentGroupCode) return;
+            const syncBadge = document.getElementById('syncBadge');
+            isInitialLoad = true;
+
+            if (dbListenerRef) dbListenerRef.off();
+
+            db.ref('.info/connected').on('value', snap => {
+                if (snap.val() === true) {
+                    syncBadge.className = "text-[11px] bg-emerald-100 text-emerald-700 px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1";
+                    syncBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Online Realtime`;
+                } else {
+                    syncBadge.className = "text-[11px] bg-amber-100 text-amber-700 px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1";
+                    syncBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500"></span> Offline`;
+                }
+            });
+            
+            dbListenerRef = db.ref(`stores/${currentGroupCode}`);
+            dbListenerRef.on('value', snapshot => {
+                const onlineVal = snapshot.val();
+                if (onlineVal) {
+                    // Notifikasi jika HP lain melakukan perubahan
+                    if (!isInitialLoad && onlineVal.lastUpdatedBy && onlineVal.lastUpdatedBy !== myDeviceId) {
+                        const msg = onlineVal.history?.[0]?.message || "Ada data baru diubah HP lain!";
+                        showNotification("Update HP Lain 📲", msg, "info");
+                    }
+                    localData = onlineVal.data || {};
+                    historyData = onlineVal.history || [];
+                    renderTable();
+                    calculateStats();
+                    renderHistory();
+                } else {
+                    syncToOnline();
+                }
+                isInitialLoad = false;
+            });
+        }
+
+        function shareGroupCode() {
+            if (navigator.share) {
+                navigator.share({
+                    title: 'STORE IKAN',
+                    text: `Kode Toko Realtime Stok Ikan: ${currentGroupCode}`,
+                }).catch(() => {});
+            } else {
+                navigator.clipboard.writeText(currentGroupCode);
+                showNotification("Kode Disalin!", `Kode ${currentGroupCode} berhasil disalin.`, "info");
+            }
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('inventoryTable');
+            const searchVal = document.getElementById('searchInput').value.toLowerCase();
+            const keys = Object.keys(localData);
+            
+            let filteredKeys = keys.filter(k => localData[k].boxNo.toString().toLowerCase().includes(searchVal));
+            document.getElementById('itemCountBadge').innerText = `${filteredKeys.length} Data`;
+
+            if (filteredKeys.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-slate-400 font-medium">Belum ada data barang.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filteredKeys.map((key) => {
+                const item = localData[key];
+                const weight = parseFloat(item.weight || 0).toFixed(3);
+                
+                return `
+                <tr class="hover:bg-slate-50 transition">
+                    <td class="py-3 px-3 text-center font-bold text-blue-700">${item.boxNo}</td>
+                    <td class="py-3 px-3 text-center">
+                        <div class="flex items-center justify-center gap-1.5">
+                            ${item.photo ? `
+                                <img src="${item.photo}" onclick="openImagePreview('${item.photo}')" class="w-12 h-12 object-cover rounded-xl cursor-pointer border border-slate-300 hover:scale-105 transition shadow-sm">
+                            ` : `
+                                <div class="w-12 h-12 rounded-xl bg-slate-100 border border-dashed border-slate-300 flex items-center justify-center text-slate-400 text-xs">
+                                    No Img
+                                </div>
+                            `}
+                            <div class="flex flex-col gap-1">
+                                <button onclick="triggerDirectUpload('${key}', 'file')" title="Upload File" class="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition border border-blue-200">
+                                    <i class="fa-solid fa-folder-open text-xs"></i>
+                                </button>
+                                <button onclick="triggerDirectUpload('${key}', 'camera')" title="Foto Kamera" class="p-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg transition border border-emerald-200">
+                                    <i class="fa-solid fa-camera text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="py-3 px-3 text-center font-bold text-slate-700">${weight} Kg</td>
+                    <td class="py-3 px-3 text-center">
+                        <input type="checkbox" ${item.isCut ? 'checked' : ''} onchange="toggleCut('${key}')" class="w-4 h-4 text-amber-500 rounded cursor-pointer accent-amber-500">
+                    </td>
+                    <td class="py-3 px-3 text-center">
+                        <input type="checkbox" ${item.isOut ? 'checked' : ''} onchange="toggleOut('${key}')" class="w-4 h-4 text-rose-500 rounded cursor-pointer accent-rose-500">
+                    </td>
+                    <td class="py-3 px-3 text-center">
+                        <div class="flex justify-center gap-1.5">
+                            <button onclick="editBox('${key}')" class="p-1 text-amber-600 hover:text-amber-800"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <button onclick="deleteBox('${key}')" class="p-1 text-rose-600 hover:text-rose-800"><i class="fa-solid fa-trash-can"></i></button>
+                        </div>
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+
+        function calculateStats() {
+            const keys = Object.keys(localData);
+            let totalBox = keys.length;
+            let totalIN = 0;
+            let totalCut = 0;
+            let totalOUT = 0;
+
+            keys.forEach(key => {
+                const item = localData[key];
+                const weight = parseFloat(item.weight) || 0;
+                totalIN += weight;
+                if (item.isCut) totalCut++;
+                if (item.isOut) totalOUT += weight;
+            });
+
+            let stokTersedia = totalIN - totalOUT;
+
+            document.getElementById('statTotalBox').innerText = totalBox;
+            document.getElementById('statTotalIN').innerText = `${totalIN.toFixed(3)} Kg`;
+            document.getElementById('statTotalCut').innerText = `${totalCut} Box`;
+            document.getElementById('statTotalOUT').innerText = `${totalOUT.toFixed(3)} Kg`;
+            document.getElementById('statStokKg').innerText = `${stokTersedia.toFixed(3)} Kg`;
+        }
+
+        function openModal() {
+            document.getElementById('boxForm').reset();
+            document.getElementById('editKey').value = '';
+            document.getElementById('existingPhoto').value = '';
+            capturedCameraBase64 = null;
+            document.getElementById('photoStatusText').classList.add('hidden');
+            document.getElementById('modalTitle').innerText = "Tambah Entry Box";
+            document.getElementById('submitBtn').innerText = "Simpan Data";
+            document.getElementById('boxModal').classList.remove('hidden');
+            document.getElementById('boxModal').classList.add('flex');
+        }
+
+        function closeModal() {
+            document.getElementById('boxModal').classList.add('hidden');
+            document.getElementById('boxModal').classList.remove('flex');
+        }
+
+        function convertFileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+            });
+        }
+
+        function triggerModalCamera() {
+            document.getElementById('boxPhotoCamera').click();
+        }
+
+        async function handleModalCameraCapture(event) {
+            const file = event.target.files[0];
+            if (file) {
+                try {
+                    capturedCameraBase64 = await convertFileToBase64(file);
+                    document.getElementById('photoStatusText').classList.remove('hidden');
+                } catch(e) {
+                    console.error("Gagal tangkap gambar", e);
+                }
+            }
+        }
+
+        async function saveBoxData(event) {
+            event.preventDefault();
+            const editKey = document.getElementById('editKey').value;
+            const boxNo = document.getElementById('boxNo').value.trim();
+            const weight = parseFloat(document.getElementById('boxWeight').value) || 0;
+            const isCut = document.getElementById('isCut').checked;
+            const isOut = document.getElementById('isOut').checked;
+            const photoInput = document.getElementById('boxPhoto');
+            let photoUrl = document.getElementById('existingPhoto').value || '';
+
+            if (capturedCameraBase64) {
+                photoUrl = capturedCameraBase64;
+            } else if (photoInput.files.length > 0) {
+                try {
+                    photoUrl = await convertFileToBase64(photoInput.files[0]);
+                } catch(e) {
+                    console.error("Gagal membaca foto", e);
+                }
+            }
+
+            const key = editKey || 'box_' + Date.now();
+            
+            localData[key] = {
+                boxNo,
+                weight,
+                photo: photoUrl,
+                isCut,
+                isOut,
+                updatedAt: new Date().toISOString()
+            };
+
+            if (editKey) {
+                logActivity(`Edit Box No. ${boxNo}`, "edit");
+            } else {
+                logActivity(`Tambah Box No. ${boxNo} (${weight} Kg)`, "add");
+            }
+
+            saveLocalData();
+            closeModal();
+            showNotification("Berhasil Disimpan!", `Data Box No. ${boxNo} sudah terupdate di HP lain.`, "success");
+        }
+
+        function editBox(key) {
+            const item = localData[key];
+            if (!item) return;
+
+            document.getElementById('editKey').value = key;
+            document.getElementById('boxNo').value = item.boxNo;
+            document.getElementById('boxWeight').value = item.weight;
+            document.getElementById('isCut').checked = item.isCut;
+            document.getElementById('isOut').checked = item.isOut;
+            document.getElementById('existingPhoto').value = item.photo || '';
+            capturedCameraBase64 = null;
+            document.getElementById('photoStatusText').classList.add('hidden');
+            document.getElementById('modalTitle').innerText = "Edit Entry Box";
+            document.getElementById('submitBtn').innerText = "Update Barang";
+
+            document.getElementById('boxModal').classList.remove('hidden');
+            document.getElementById('boxModal').classList.add('flex');
+        }
+
+        function deleteBox(key) {
+            const item = localData[key];
+            if (!item) return;
+
+            if (confirm(`Hapus Box No. ${item.boxNo}? Data di HP lain juga akan terhapus.`)) {
+                logActivity(`Hapus Box No. ${item.boxNo}`, "delete");
+                delete localData[key];
+                saveLocalData();
+                showNotification("Dihapus!", `Box No. ${item.boxNo} telah dihapus.`, "warning");
+            }
+        }
+
+        function toggleCut(key) {
+            if (localData[key]) {
+                localData[key].isCut = !localData[key].isCut;
+                const status = localData[key].isCut ? "di-CUT" : "batal CUT";
+                logActivity(`Box No. ${localData[key].boxNo} ${status}`, "edit");
+                saveLocalData();
+            }
+        }
+
+        function toggleOut(key) {
+            if (localData[key]) {
+                localData[key].isOut = !localData[key].isOut;
+                const status = localData[key].isOut ? "OUT" : "batal OUT";
+                logActivity(`Box No. ${localData[key].boxNo} ${status}`, "edit");
+                saveLocalData();
+            }
+        }
+
+        function triggerDirectUpload(key, type = 'file') {
+            activeTargetKeyForUpload = key;
+            if (type === 'camera') {
+                document.getElementById('directTableCameraInput').click();
+            } else {
+                document.getElementById('directTableFileInput').click();
+            }
+        }
+
+        async function handleDirectTableUpload(event) {
+            const file = event.target.files[0];
+            if (file && activeTargetKeyForUpload && localData[activeTargetKeyForUpload]) {
+                try {
+                    const base64Photo = await convertFileToBase64(file);
+                    localData[activeTargetKeyForUpload].photo = base64Photo;
+                    logActivity(`Foto diunggah untuk Box No. ${localData[activeTargetKeyForUpload].boxNo}`, "edit");
+                    saveLocalData();
+                    showNotification("Foto Diunggah!", `Foto Box No. ${localData[activeTargetKeyForUpload].boxNo} terupdate.`, "success");
+                } catch(e) {
+                    console.error("Gagal mengunggah foto", e);
+                }
+            }
+            event.target.value = '';
+        }
+
+        function openImagePreview(url) {
+            document.getElementById('modalPreviewImg').src = url;
+            document.getElementById('imagePreviewModal').classList.remove('hidden');
+            document.getElementById('imagePreviewModal').classList.add('flex');
+        }
+
+        function closeImagePreview() {
+            document.getElementById('imagePreviewModal').classList.add('hidden');
+            document.getElementById('imagePreviewModal').classList.remove('flex');
+        }
+    </script>
+</body>
+</html>
