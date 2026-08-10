@@ -14,7 +14,10 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 </head>
-<body class="bg-slate-50 font-sans text-slate-800 min-h-screen pb-12">
+<body class="bg-slate-50 font-sans text-slate-800 min-h-screen pb-12 relative">
+
+    <!-- Container Toast Notification (Pop-up Realtime) -->
+    <div id="toastContainer" class="fixed top-16 right-4 z-50 flex flex-col gap-2 max-w-xs w-full pointer-events-none"></div>
 
     <!-- Header Banner -->
     <header class="bg-blue-700 text-white p-4 shadow-md sticky top-0 z-40">
@@ -54,7 +57,7 @@
             </span>
         </div>
 
-        <!-- 5 Grid Statistik Dashboard (Termasuk Total Berat OUT) -->
+        <!-- 5 Grid Statistik Dashboard -->
         <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <div class="bg-white p-3.5 rounded-2xl border border-slate-200/80 text-center shadow-sm">
                 <p class="text-xs font-semibold text-slate-500">Total Box/Item</p>
@@ -202,7 +205,6 @@
 
     <!-- JavaScript Engine -->
     <script>
-        // Konfigurasi Lengkap Firebase SDK
         const firebaseConfig = {
             apiKey: "AIzaSyFishStoreDatabaseKey2026",
             authDomain: "fish-store-default-rtdb.firebaseapp.com",
@@ -216,6 +218,10 @@
         let db = null;
         let storage = null;
         let dbListenerRef = null;
+
+        // ID Unik untuk HP Ini agar tidak memicu notifikasi pada diri sendiri
+        const myDeviceId = 'device_' + Math.random().toString(36).substring(2, 9);
+        let isInitialLoad = true;
 
         try {
             if (!firebase.apps.length) {
@@ -239,6 +245,40 @@
 
         loadLocalData();
         connectToOnlineDatabase();
+
+        function showNotification(title, message, type = "success") {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            
+            let bgClass = "bg-emerald-600";
+            let icon = "fa-bell";
+
+            if(type === "info") { bgClass = "bg-blue-600"; icon = "fa-circle-info"; }
+            if(type === "warning") { bgClass = "bg-amber-600"; icon = "fa-triangle-exclamation"; }
+
+            toast.className = `${bgClass} text-white p-3 rounded-2xl shadow-xl flex items-start gap-3 pointer-events-auto transition-all duration-300 transform translate-y-[-10px] opacity-0`;
+            toast.innerHTML = `
+                <div class="mt-0.5 text-base"><i class="fa-solid ${icon}"></i></div>
+                <div class="flex-1">
+                    <p class="font-bold text-xs leading-tight">${title}</p>
+                    <p class="text-[11px] opacity-90 mt-0.5 leading-snug">${message}</p>
+                </div>
+                <button onclick="this.parentElement.remove()" class="text-white/80 hover:text-white text-xs">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            `;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-[-10px]', 'opacity-0');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-[-10px]');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
 
         function loadLocalData() {
             const savedData = localStorage.getItem(`store_data_${currentGroupCode}`);
@@ -304,12 +344,12 @@
         function connectToOnlineDatabase() {
             if (!db) return;
             const syncBadge = document.getElementById('syncBadge');
+            isInitialLoad = true;
 
             if (dbListenerRef) {
                 dbListenerRef.off();
             }
 
-            // Monitor status koneksi internet Firebase
             db.ref('.info/connected').on('value', (snap) => {
                 if (snap.val() === false) {
                     syncBadge.className = "text-[11px] bg-amber-100 text-amber-700 px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1";
@@ -321,7 +361,16 @@
             
             dbListenerRef.on('value', (snapshot) => {
                 const onlineVal = snapshot.val();
+                
                 if (onlineVal) {
+                    const lastUpdatedBy = onlineVal.lastUpdatedBy;
+
+                    // Deteksi jika pembaruan dari HP Lain
+                    if (!isInitialLoad && lastUpdatedBy && lastUpdatedBy !== myDeviceId) {
+                        const latestHistory = onlineVal.history && onlineVal.history[0] ? onlineVal.history[0].message : "Ada pembaruan data stok ikan!";
+                        showNotification("Pembaruan Masuk! 🐟", latestHistory, "success");
+                    }
+
                     localData = onlineVal.data || {};
                     historyData = onlineVal.history || [];
                     localStorage.setItem(`store_data_${currentGroupCode}`, JSON.stringify(localData));
@@ -331,6 +380,7 @@
                     historyData = [];
                 }
 
+                isInitialLoad = false;
                 renderTable();
                 calculateStats();
                 renderHistory();
@@ -348,7 +398,9 @@
             if (db) {
                 const payload = {
                     data: localData,
-                    history: historyData
+                    history: historyData,
+                    lastUpdatedBy: myDeviceId,
+                    lastUpdatedAt: Date.now()
                 };
                 db.ref(`stores/${currentGroupCode}`).set(payload).catch(err => console.log("Gagal sync online:", err));
             }
@@ -420,7 +472,6 @@
             });
         }
 
-        // --- Render Tabel & Hitung Statistik ---
         function renderTable() {
             const tbody = document.getElementById('inventoryTable');
             const searchKeyword = document.getElementById('searchInput').value.toLowerCase();
@@ -440,7 +491,6 @@
                     return;
                 }
 
-                // Foto dengan ukuran diperbesar (w-16 h-16 / 64px)
                 let photoHTML = item.photo ? 
                     `<img src="${item.photo}" onclick="viewFullImage('${item.photo}')" class="w-16 h-16 object-cover rounded-xl shadow-sm border border-slate-200 cursor-pointer hover:scale-105 transition-transform mx-auto" title="Klik untuk memperbesar">` :
                     `<button onclick="triggerDirectUpload('${key}')" class="w-16 h-16 bg-slate-100 hover:bg-slate-200 border border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center text-slate-400 text-[10px] mx-auto gap-1 transition">
@@ -502,7 +552,6 @@
             document.getElementById('statStokKg').innerText = `${stokKg.toFixed(3)} Kg`;
         }
 
-        // --- Modal & Form Handler ---
         function openModal() {
             document.getElementById('editKey').value = '';
             document.getElementById('boxForm').reset();
@@ -583,7 +632,6 @@
             }
         }
 
-        // --- Upload Foto Langsung Dari Tabel ---
         function triggerDirectUpload(key) {
             activeTargetKeyForUpload = key;
             document.getElementById('directTableFileInput').click();
@@ -605,7 +653,6 @@
             activeTargetKeyForUpload = null;
         }
 
-        // --- View Foto Penuh ---
         function viewFullImage(src) {
             document.getElementById('modalPreviewImg').src = src;
             document.getElementById('imagePreviewModal').classList.remove('hidden');
