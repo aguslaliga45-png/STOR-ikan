@@ -25,7 +25,7 @@
                 </div>
                 <div>
                     <h1 class="text-lg font-black tracking-wide leading-none">STORE IKAN</h1>
-                    <p class="text-[11px] text-blue-100 font-medium mt-1">Pencatatan Stok & Pemotongan</p>
+                    <p class="text-[11px] text-blue-100 font-medium mt-1">Pencatatan Stok & Pemotongan Online</p>
                 </div>
             </div>
             <div class="flex items-center gap-2">
@@ -54,13 +54,13 @@
             </span>
         </div>
 
-        <!-- 4 Grid Statistik Dashboard -->
-        <div class="grid grid-cols-2 gap-3">
+        <!-- 5 Grid Statistik Dashboard (Termasuk Total Berat OUT) -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <div class="bg-white p-3.5 rounded-2xl border border-slate-200/80 text-center shadow-sm">
                 <p class="text-xs font-semibold text-slate-500">Total Box/Item</p>
                 <p id="statTotalBox" class="text-2xl font-black text-slate-800 mt-1">0</p>
             </div>
-            <div class="bg-white p-3.5 rounded-2xl border border-slate-200/80 text-center shadow-sm">
+            <div class="bg-white p-3.5 rounded-2xl border border-blue-200/80 text-center shadow-sm">
                 <p class="text-xs font-semibold text-blue-600">Total IN (Masuk)</p>
                 <p id="statTotalIN" class="text-2xl font-black text-blue-700 mt-1">0.000 Kg</p>
             </div>
@@ -68,7 +68,11 @@
                 <p class="text-xs font-semibold text-amber-600">Di-CUT (Potong)</p>
                 <p id="statTotalCut" class="text-2xl font-black text-amber-600 mt-1">0 Box</p>
             </div>
-            <div class="bg-white p-3.5 rounded-2xl border border-emerald-200/70 text-center shadow-sm">
+            <div class="bg-white p-3.5 rounded-2xl border border-rose-200/70 text-center shadow-sm">
+                <p class="text-xs font-semibold text-rose-600">Total OUT (Keluar)</p>
+                <p id="statTotalOUT" class="text-2xl font-black text-rose-600 mt-1">0.000 Kg</p>
+            </div>
+            <div class="bg-white p-3.5 rounded-2xl border border-emerald-200/70 text-center shadow-sm col-span-2 sm:col-span-1">
                 <p class="text-xs font-semibold text-emerald-600">Stok Tersedia</p>
                 <p id="statStokKg" class="text-2xl font-black text-emerald-600 mt-1">0.000 Kg</p>
             </div>
@@ -183,6 +187,16 @@
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Modal View Foto Ukuran Penuh -->
+    <div id="imagePreviewModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md hidden items-center justify-center p-4 z-50" onclick="closeImagePreview()">
+        <div class="relative max-w-lg w-full bg-white rounded-2xl overflow-hidden p-2 shadow-2xl" onclick="event.stopPropagation()">
+            <button onclick="closeImagePreview()" class="absolute top-3 right-3 bg-slate-800/70 hover:bg-slate-900 text-white w-8 h-8 rounded-full flex items-center justify-center z-10 transition">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <img id="modalPreviewImg" src="" alt="Preview Foto Ikan" class="w-full h-auto max-h-[80vh] object-contain rounded-xl">
         </div>
     </div>
 
@@ -396,15 +410,9 @@
 
                         canvas.width = width;
                         canvas.height = height;
-
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, width, height);
-
-                        canvas.toBlob(
-                            blob => blob ? resolve(blob) : reject(new Error("Gagal mengompresi gambar")),
-                            'image/webp',
-                            quality
-                        );
+                        resolve(canvas.toDataURL('image/jpeg', quality));
                     };
                     img.onerror = error => reject(error);
                 };
@@ -412,16 +420,94 @@
             });
         }
 
-        async function uploadImageToCloud(file, itemKey) {
-            if (!storage) throw new Error("Firebase Storage belum aktif.");
-            const compressedBlob = await compressImage(file);
-            const storageRef = storage.ref(`images/${currentGroupCode}/${itemKey}_${Date.now()}.webp`);
-            const snapshot = await storageRef.put(compressedBlob, { contentType: 'image/webp' });
-            return await snapshot.ref.getDownloadURL();
+        // --- Render Tabel & Hitung Statistik ---
+        function renderTable() {
+            const tbody = document.getElementById('inventoryTable');
+            const searchKeyword = document.getElementById('searchInput').value.toLowerCase();
+            tbody.innerHTML = '';
+
+            const keys = Object.keys(localData);
+            document.getElementById('itemCountBadge').innerText = `${keys.length} Data`;
+
+            if (keys.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-slate-400">Belum ada data barang. Klik tombol Tambah Entry Box.</td></tr>`;
+                return;
+            }
+
+            keys.forEach((key) => {
+                const item = localData[key];
+                if (searchKeyword && !item.no.toLowerCase().includes(searchKeyword)) {
+                    return;
+                }
+
+                // Foto dengan ukuran diperbesar (w-16 h-16 / 64px)
+                let photoHTML = item.photo ? 
+                    `<img src="${item.photo}" onclick="viewFullImage('${item.photo}')" class="w-16 h-16 object-cover rounded-xl shadow-sm border border-slate-200 cursor-pointer hover:scale-105 transition-transform mx-auto" title="Klik untuk memperbesar">` :
+                    `<button onclick="triggerDirectUpload('${key}')" class="w-16 h-16 bg-slate-100 hover:bg-slate-200 border border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center text-slate-400 text-[10px] mx-auto gap-1 transition">
+                        <i class="fa-solid fa-camera text-sm"></i>
+                        <span>Foto</span>
+                    </button>`;
+
+                const cutBadge = item.isCut ? `<span class="bg-amber-100 text-amber-700 text-[10px] px-2 py-0.5 rounded-md font-bold">CUT</span>` : `<span class="text-slate-300">-</span>`;
+                const outBadge = item.isOut ? `<span class="bg-rose-100 text-rose-700 text-[10px] px-2 py-0.5 rounded-md font-bold">OUT</span>` : `<span class="text-slate-300">-</span>`;
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition border-b border-slate-100";
+                tr.innerHTML = `
+                    <td class="py-3 px-3 text-center font-bold text-slate-800 text-xs">${item.no}</td>
+                    <td class="py-2 px-3 text-center">${photoHTML}</td>
+                    <td class="py-3 px-3 text-center font-semibold text-blue-700">${parseFloat(item.weight).toFixed(3)} Kg</td>
+                    <td class="py-3 px-3 text-center">${cutBadge}</td>
+                    <td class="py-3 px-3 text-center">${outBadge}</td>
+                    <td class="py-3 px-3 text-center">
+                        <div class="flex items-center justify-center gap-1.5">
+                            <button onclick="editBox('${key}')" class="w-7 h-7 bg-amber-50 hover:bg-amber-100 text-amber-600 rounded-lg flex items-center justify-center shadow-xs">
+                                <i class="fa-solid fa-pen"></i>
+                            </button>
+                            <button onclick="deleteBox('${key}')" class="w-7 h-7 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg flex items-center justify-center shadow-xs">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
         }
 
+        function calculateStats() {
+            const keys = Object.keys(localData);
+            let totalBox = keys.length;
+            let totalIN = 0;
+            let totalCutCount = 0;
+            let totalOUTKg = 0;
+            let stokKg = 0;
+
+            keys.forEach(k => {
+                const item = localData[k];
+                const weight = parseFloat(item.weight) || 0;
+
+                totalIN += weight;
+                if (item.isCut) totalCutCount++;
+                if (item.isOut) {
+                    totalOUTKg += weight;
+                } else {
+                    stokKg += weight;
+                }
+            });
+
+            document.getElementById('statTotalBox').innerText = totalBox;
+            document.getElementById('statTotalIN').innerText = `${totalIN.toFixed(3)} Kg`;
+            document.getElementById('statTotalCut').innerText = `${totalCutCount} Box`;
+            document.getElementById('statTotalOUT').innerText = `${totalOUTKg.toFixed(3)} Kg`;
+            document.getElementById('statStokKg').innerText = `${stokKg.toFixed(3)} Kg`;
+        }
+
+        // --- Modal & Form Handler ---
         function openModal() {
-            resetForm();
+            document.getElementById('editKey').value = '';
+            document.getElementById('boxForm').reset();
+            document.getElementById('existingPhoto').value = '';
+            document.getElementById('modalTitle').innerText = 'Tambah Entry Box';
             document.getElementById('boxModal').classList.remove('hidden');
             document.getElementById('boxModal').classList.add('flex');
         }
@@ -433,65 +519,41 @@
 
         async function saveBoxData(e) {
             e.preventDefault();
-            const submitBtn = document.getElementById('submitBtn');
-            const originalBtnHtml = submitBtn.innerHTML;
-
-            const editKeyVal = document.getElementById('editKey').value;
-            const isEditing = Boolean(editKeyVal);
-            const key = editKeyVal || 'item_' + Date.now();
-            
-            const boxNo = document.getElementById('boxNo').value.trim();
-            const weight = parseFloat(document.getElementById('boxWeight').value) || 0;
+            const editKey = document.getElementById('editKey').value;
+            const no = document.getElementById('boxNo').value.trim();
+            const weight = parseFloat(document.getElementById('boxWeight').value);
             const isCut = document.getElementById('isCut').checked;
             const isOut = document.getElementById('isOut').checked;
             const photoInput = document.getElementById('boxPhoto');
-            let photoUrl = document.getElementById('existingPhoto').value;
+            const existingPhoto = document.getElementById('existingPhoto').value;
+
+            if (!no || isNaN(weight)) return alert("Isi No. Box dan Jumlah IN dengan benar!");
+
+            let photoUrl = existingPhoto;
 
             if (photoInput.files && photoInput.files[0]) {
                 try {
-                    submitBtn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Mengunggah...`;
-                    submitBtn.disabled = true;
-                    photoUrl = await uploadImageToCloud(photoInput.files[0], key);
+                    photoUrl = await compressImage(photoInput.files[0]);
                 } catch (err) {
-                    console.error("Gagal upload ke cloud:", err);
-                    alert("Gagal mengunggah foto online. Pastikan Firebase Storage aktif.");
-                    submitBtn.innerHTML = originalBtnHtml;
-                    submitBtn.disabled = false;
-                    return;
+                    console.error("Gagal memproses gambar:", err);
                 }
             }
 
+            const key = editKey || `box_${Date.now()}`;
+            const isNew = !editKey;
+
             localData[key] = {
-                boxNo: boxNo,
-                weight: weight,
-                isCut: isCut,
-                isOut: isOut,
-                photo: photoUrl || null,
-                updatedAt: Date.now()
+                no,
+                weight,
+                isCut,
+                isOut,
+                photo: photoUrl,
+                updatedAt: new Date().toISOString()
             };
 
-            submitBtn.innerHTML = originalBtnHtml;
-            submitBtn.disabled = false;
-
-            if (isEditing) {
-                logActivity(`Mengubah data Box #${boxNo} (Berat: ${weight} Kg)`, "edit");
-            } else {
-                logActivity(`Menambahkan Box #${boxNo} baru (Berat: ${weight} Kg)`, "add");
-            }
-
+            logActivity(`${isNew ? 'Menambahkan' : 'Mengubah'} Box No. ${no} (${weight.toFixed(3)} Kg)`, isNew ? "add" : "edit");
             saveLocalData();
             closeModal();
-        }
-
-        function resetForm() {
-            document.getElementById('editKey').value = '';
-            document.getElementById('boxNo').value = '';
-            document.getElementById('boxWeight').value = '';
-            document.getElementById('isCut').checked = false;
-            document.getElementById('isOut').checked = false;
-            document.getElementById('boxPhoto').value = '';
-            document.getElementById('existingPhoto').value = '';
-            document.getElementById('modalTitle').innerText = 'Tambah Entry Box';
         }
 
         function editBox(key) {
@@ -499,167 +561,60 @@
             if (!item) return;
 
             document.getElementById('editKey').value = key;
-            document.getElementById('boxNo').value = item.boxNo;
+            document.getElementById('boxNo').value = item.no;
             document.getElementById('boxWeight').value = item.weight;
-            document.getElementById('isCut').checked = item.isCut || false;
-            document.getElementById('isOut').checked = item.isOut || false;
+            document.getElementById('isCut').checked = item.isCut;
+            document.getElementById('isOut').checked = item.isOut;
             document.getElementById('existingPhoto').value = item.photo || '';
-            document.getElementById('modalTitle').innerText = `Edit Box #${item.boxNo}`;
+            document.getElementById('modalTitle').innerText = `Edit Box No. ${item.no}`;
 
-            openModal();
+            document.getElementById('boxModal').classList.remove('hidden');
+            document.getElementById('boxModal').classList.add('flex');
         }
 
         function deleteBox(key) {
             const item = localData[key];
             if (!item) return;
 
-            if (confirm(`Apakah Anda yakin ingin menghapus Box #${item.boxNo}?`)) {
-                logActivity(`Menghapus Box #${item.boxNo}`, "delete");
+            if (confirm(`Apakah Anda yakin ingin menghapus Box No. ${item.no}?`)) {
+                logActivity(`Menghapus Box No. ${item.no} (${parseFloat(item.weight).toFixed(3)} Kg)`, "delete");
                 delete localData[key];
                 saveLocalData();
             }
         }
 
-        function triggerDirectPhotoUpload(key) {
+        // --- Upload Foto Langsung Dari Tabel ---
+        function triggerDirectUpload(key) {
             activeTargetKeyForUpload = key;
             document.getElementById('directTableFileInput').click();
         }
 
-        async function handleDirectTableUpload(event) {
-            const file = event.target.files[0];
+        async function handleDirectTableUpload(e) {
+            const file = e.target.files[0];
             if (file && activeTargetKeyForUpload && localData[activeTargetKeyForUpload]) {
                 try {
-                    const photoUrl = await uploadImageToCloud(file, activeTargetKeyForUpload);
-                    localData[activeTargetKeyForUpload].photo = photoUrl;
-                    
-                    logActivity(`Mengunggah foto baru untuk Box #${localData[activeTargetKeyForUpload].boxNo}`, "edit");
+                    const base64Img = await compressImage(file);
+                    localData[activeTargetKeyForUpload].photo = base64Img;
+                    logActivity(`Mengupload foto untuk Box No. ${localData[activeTargetKeyForUpload].no}`, "edit");
                     saveLocalData();
                 } catch (err) {
-                    alert("Gagal mengunggah foto ke Cloud Storage!");
+                    alert("Gagal mengunggah foto.");
                 }
             }
-            event.target.value = "";
+            e.target.value = '';
+            activeTargetKeyForUpload = null;
         }
 
-        function toggleStatus(key, field) {
-            if (localData[key]) {
-                localData[key][field] = !localData[key][field];
-                const item = localData[key];
-                const statusName = field === 'isCut' ? 'CUT (Potong)' : 'OUT (Keluar)';
-                const statusState = item[field] ? 'Diaktifkan' : 'Dimatikan';
-
-                logActivity(`Status ${statusName} untuk Box #${item.boxNo} ${statusState}`, "edit");
-                saveLocalData();
-            }
+        // --- View Foto Penuh ---
+        function viewFullImage(src) {
+            document.getElementById('modalPreviewImg').src = src;
+            document.getElementById('imagePreviewModal').classList.remove('hidden');
+            document.getElementById('imagePreviewModal').classList.add('flex');
         }
 
-        function renderTable() {
-            const tbody = document.getElementById('inventoryTable');
-            const searchVal = document.getElementById('searchInput').value.toLowerCase();
-            const keys = Object.keys(localData);
-
-            if (keys.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="6" class="text-center py-8 text-slate-400">
-                            Belum ada data barang tersimpan. Klik tombol + untuk menambahkan.
-                        </td>
-                    </tr>`;
-                document.getElementById('itemCountBadge').innerText = "0 Data";
-                return;
-            }
-
-            let filteredKeys = keys.filter(key => {
-                const item = localData[key];
-                return item.boxNo.toString().toLowerCase().includes(searchVal);
-            });
-
-            filteredKeys.sort((a, b) => 
-                String(localData[a].boxNo).localeCompare(String(localData[b].boxNo), undefined, { numeric: true, sensitivity: 'base' })
-            );
-
-            let html = '';
-            filteredKeys.forEach(key => {
-                const item = localData[key];
-                const isOut = item.isOut;
-
-                html += `
-                <tr class="hover:bg-slate-50 transition border-b border-slate-100 ${isOut ? 'bg-slate-50/60' : ''}">
-                    <!-- NO BOX -->
-                    <td class="py-3 px-3 text-center font-bold text-slate-900 ${isOut ? 'line-through text-slate-400' : ''}">
-                        ${item.boxNo}
-                    </td>
-
-                    <!-- FOTO -->
-                    <td class="py-3 px-3 text-center">
-                        <button onclick="triggerDirectPhotoUpload('${key}')" class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 flex items-center justify-center mx-auto overflow-hidden shadow-xs transition" title="Klik untuk tambah/ubah foto">
-                            ${item.photo 
-                                ? `<img src="${item.photo}" class="w-full h-full object-cover">` 
-                                : `<i class="fa-regular fa-image text-slate-400 text-sm"></i>`}
-                        </button>
-                    </td>
-
-                    <!-- IN (KG) -->
-                    <td class="py-3 px-3 text-center font-semibold ${isOut ? 'line-through text-slate-400' : 'text-slate-700'}">
-                        ${formatNumber(item.weight)}
-                    </td>
-
-                    <!-- CUT CHECKBOX -->
-                    <td class="py-3 px-3 text-center">
-                        <button onclick="toggleStatus('${key}', 'isCut')" class="w-6 h-6 rounded-md inline-flex items-center justify-center border transition ${item.isCut ? 'bg-blue-50 border-blue-200 text-blue-600 font-bold' : 'border-slate-200 text-slate-300'}">
-                            ${item.isCut ? '<i class="fa-solid fa-check text-xs"></i>' : ''}
-                        </button>
-                    </td>
-
-                    <!-- OUT CHECKBOX -->
-                    <td class="py-3 px-3 text-center">
-                        <button onclick="toggleStatus('${key}', 'isOut')" class="w-6 h-6 rounded-md inline-flex items-center justify-center border transition ${item.isOut ? 'bg-rose-50 border-rose-200 text-rose-600 font-bold' : 'border-slate-200 text-slate-300'}">
-                            ${item.isOut ? '<i class="fa-solid fa-check text-xs"></i>' : ''}
-                        </button>
-                    </td>
-
-                    <!-- AKSI -->
-                    <td class="py-3 px-3 text-center">
-                        <div class="flex items-center justify-center gap-2">
-                            <button onclick="editBox('${key}')" class="text-blue-600 hover:text-blue-800 text-sm" title="Edit">
-                                <i class="fa-regular fa-pen-to-square"></i>
-                            </button>
-                            <button onclick="deleteBox('${key}')" class="text-rose-500 hover:text-rose-700 text-sm" title="Hapus">
-                                <i class="fa-regular fa-trash-can"></i>
-                            </button>
-                        </div>
-                    </td>
-                </tr>`;
-            });
-
-            tbody.innerHTML = html;
-            document.getElementById('itemCountBadge').innerText = `${filteredKeys.length} Data`;
-        }
-
-        function calculateStats() {
-            const keys = Object.keys(localData);
-            let totalBox = keys.length;
-            let totalIN = 0;
-            let cutBox = 0;
-            let stokTersediaKg = 0;
-
-            keys.forEach(key => {
-                const item = localData[key];
-                const weight = parseFloat(item.weight) || 0;
-                
-                totalIN += weight;
-                if (item.isCut) cutBox++;
-                if (!item.isOut) stokTersediaKg += weight;
-            });
-
-            document.getElementById('statTotalBox').innerText = totalBox;
-            document.getElementById('statTotalIN').innerText = `${formatNumber(totalIN)} Kg`;
-            document.getElementById('statTotalCut').innerText = `${cutBox} Box`;
-            document.getElementById('statStokKg').innerText = `${formatNumber(stokTersediaKg)} Kg`;
-        }
-
-        function formatNumber(num) {
-            return num.toLocaleString('id-ID', { minimumFractionDigits: 1, maximumFractionDigits: 3 });
+        function closeImagePreview() {
+            document.getElementById('imagePreviewModal').classList.add('hidden');
+            document.getElementById('imagePreviewModal').classList.remove('flex');
         }
     </script>
 </body>
