@@ -1,651 +1,244 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>STORE IKAN - Catatan Stok</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aplikasi Gudang Realtime Sync</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Firebase SDK (Compat Version) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 </head>
-<body class="bg-slate-50 font-sans text-slate-800 min-h-screen pb-12">
+<body class="bg-slate-100 min-h-screen text-slate-800 pb-10">
 
-    <div id="toastContainer" class="fixed top-16 right-4 z-50 flex flex-col gap-2 max-w-xs w-full pointer-events-none"></div>
+  <!-- Header -->
+  <header class="bg-indigo-600 text-white p-4 shadow-md sticky top-0 z-50">
+    <div class="max-w-md mx-auto flex justify-between items-center">
+      <h1 class="text-xl font-bold flex items-center gap-2">
+        <i class="fa-solid font-boxes-stacked"></i> Stok Gudang Sync
+      </h1>
+      <span id="sync-status" class="text-xs bg-indigo-800 px-2.5 py-1 rounded-full flex items-center gap-1">
+        <span class="w-2 h-2 rounded-full bg-yellow-400 animate-pulse"></span> Connecting...
+      </span>
+    </div>
+  </header>
 
-    <header class="bg-blue-700 text-white p-4 shadow-md sticky top-0 z-40">
-        <div class="max-w-xl mx-auto flex justify-between items-center">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-2xl bg-cyan-400 flex items-center justify-center text-xl">🐟</div>
-                <div>
-                    <h1 class="text-lg font-black leading-none">STORE IKAN</h1>
-                    <p class="text-[11px] text-blue-100 mt-1">Stok & Pemotongan Online</p>
-                </div>
-            </div>
-            <div class="flex gap-2 text-xs">
-                <button onclick="backupData()" class="bg-blue-600 hover:bg-blue-800 text-white px-3 py-2 rounded-xl font-semibold border border-blue-500"><i class="fa-solid fa-download"></i> Backup</button>
-                <button onclick="shareGroupCode()" class="bg-cyan-400 hover:bg-cyan-500 text-blue-950 px-3 py-2 rounded-xl font-bold"><i class="fa-solid fa-share-nodes"></i> Bagikan</button>
-            </div>
+  <main class="max-w-md mx-auto p-4 space-y-4">
+
+    <!-- Card Tambah Barang -->
+    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+      <h2 class="font-semibold text-slate-700 mb-3 flex items-center gap-2">
+        <i class="fa-solid fa-plus-circle text-indigo-600"></i> Tambah Barang Baru
+      </h2>
+      <form id="form-barang" class="space-y-3">
+        <div>
+          <label class="text-xs font-medium text-slate-500">Nama Barang</label>
+          <input type="text" id="nama" placeholder="Contoh: Semen Gresik 50kg" required class="w-full mt-1 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
         </div>
-    </header>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-xs font-medium text-slate-500">Kode / SKU</label>
+            <input type="text" id="sku" placeholder="SKU-001" required class="w-full mt-1 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+          </div>
+          <div>
+            <label class="text-xs font-medium text-slate-500">Kategori</label>
+            <input type="text" id="kategori" placeholder="Material" required class="w-full mt-1 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-xs font-medium text-slate-500">Jumlah Stok</label>
+            <input type="number" id="stok" min="0" placeholder="0" required class="w-full mt-1 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+          </div>
+          <div>
+            <label class="text-xs font-medium text-slate-500">Satuan</label>
+            <input type="text" id="satuan" placeholder="Pcs / Sak / Box" required class="w-full mt-1 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+          </div>
+        </div>
+        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-lg text-sm font-semibold transition shadow-sm">
+          Simpan Ke Gudang
+        </button>
+      </form>
+    </div>
 
-    <main class="max-w-xl mx-auto p-3.5 space-y-4">
+    <!-- Filter & Pencarian -->
+    <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-200">
+      <div class="relative">
+        <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400 text-sm"></i>
+        <input type="text" id="search" onkeyup="filterBarang()" placeholder="Cari nama atau SKU barang..." class="w-full pl-9 pr-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+      </div>
+    </div>
 
-        <!-- Input Kode Toko Berupa Angka -->
-        <div class="bg-white border rounded-2xl p-3 shadow-sm flex justify-between items-center text-xs">
+    <!-- Ringkasan Info -->
+    <div class="grid grid-cols-2 gap-2 text-center">
+      <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+        <p class="text-xs text-slate-500">Total Jenis Barang</p>
+        <p id="total-jenis" class="text-lg font-bold text-slate-800">0</p>
+      </div>
+      <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+        <p class="text-xs text-slate-500">Total Stok Fisik</p>
+        <p id="total-stok" class="text-lg font-bold text-indigo-600">0</p>
+      </div>
+    </div>
+
+    <!-- Daftar Stok Barang -->
+    <div class="space-y-2">
+      <h3 class="font-semibold text-slate-700 text-sm flex items-center justify-between">
+        <span>Daftar Stok Realtime</span>
+        <span class="text-xs text-slate-400 font-normal">Otomatis Sync</span>
+      </h3>
+      <div id="list-barang" class="space-y-2">
+        <div class="text-center py-8 text-slate-400 text-sm">Memuat data gudang...</div>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    // ==========================================
+    // CONFIG FIREBASE (GANTI DENGAN KUNCI ANDA)
+    // ==========================================
+    const firebaseConfig = {
+      apiKey: "API_KEY_ANDA",
+      authDomain: "PROJECT_ID_ANDA.firebaseapp.com",
+      databaseURL: "https://PROJECT_ID_ANDA-default-rtdb.firebaseio.com",
+      projectId: "PROJECT_ID_ANDA",
+      storageBucket: "PROJECT_ID_ANDA.appspot.com",
+      messagingSenderId: "SENDER_ID",
+      appId: "APP_ID"
+    };
+
+    // Inisialisasi Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const refGudang = db.ref('gudang');
+
+    // Cek koneksi realtime
+    db.ref('.info/connected').on('value', (snap) => {
+      const statusEl = document.getElementById('sync-status');
+      if (snap.val() === true) {
+        statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400"></span> Online (Sync)`;
+        statusEl.className = "text-xs bg-emerald-900 text-emerald-200 px-2.5 py-1 rounded-full flex items-center gap-1.5";
+      } else {
+        statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-400"></span> Offline`;
+        statusEl.className = "text-xs bg-rose-900 text-rose-200 px-2.5 py-1 rounded-full flex items-center gap-1.5";
+      }
+    });
+
+    let dataBarangGudang = {};
+
+    // 1. TAMBAH BARANG KE DATABASE
+    document.getElementById('form-barang').addEventListener('submit', (e) => {
+      e.preventDefault();
+      
+      const newKey = refGudang.push().key;
+      const data = {
+        id: newKey,
+        nama: document.getElementById('nama').value,
+        sku: document.getElementById('sku').value,
+        kategori: document.getElementById('kategori').value,
+        stok: parseInt(document.getElementById('stok').value),
+        satuan: document.getElementById('satuan').value,
+        updatedAt: Date.now()
+      };
+
+      refGudang.child(newKey).set(data, (error) => {
+        if (!error) {
+          document.getElementById('form-barang').reset();
+        } else {
+          alert("Gagal menambahkan barang: " + error.message);
+        }
+      });
+    });
+
+    // 2. LISTEN REALTIME SYNC DARI FIREBASE (Otomatis Update HP A & B)
+    refGudang.on('value', (snapshot) => {
+      dataBarangGudang = snapshot.val() || {};
+      renderListBarang(dataBarangGudang);
+    });
+
+    // 3. RENDER TAMPILAN BARANG
+    function renderListBarang(dataMap) {
+      const listContainer = document.getElementById('list-barang');
+      listContainer.innerHTML = '';
+
+      const keys = Object.keys(dataMap);
+      if (keys.length === 0) {
+        listContainer.innerHTML = `<div class="bg-white p-6 rounded-xl text-center text-slate-400 text-sm">Belum ada barang di gudang.</div>`;
+        document.getElementById('total-jenis').innerText = '0';
+        document.getElementById('total-stok').innerText = '0';
+        return;
+      }
+
+      let totalStokFisik = 0;
+
+      keys.reverse().forEach(key => {
+        const item = dataMap[key];
+        totalStokFisik += parseInt(item.stok || 0);
+
+        const card = document.createElement('div');
+        card.className = "bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between gap-3 item-card";
+        card.dataset.search = `${item.nama.toLowerCase()} ${item.sku.toLowerCase()}`;
+
+        card.innerHTML = `
+          <div class="flex-1 min-w-0">
             <div class="flex items-center gap-2">
-                <i class="fa-solid fa-server text-blue-600"></i>
-                <span class="font-semibold text-slate-600">Kode Toko (Angka):</span>
-                <input type="number" id="groupCodeInput" value="123456" inputmode="numeric" placeholder="Contoh: 123456" class="font-mono font-bold text-blue-700 bg-slate-100 px-2 py-1 rounded-lg w-28 uppercase border focus:outline-none">
-                <button onclick="changeGroupCode()" class="text-blue-600 hover:underline font-bold">Ganti</button>
+              <span class="text-xs bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-mono font-medium">${item.sku}</span>
+              <span class="text-xs text-indigo-600 font-medium">${item.kategori}</span>
             </div>
-            <span id="syncBadge" class="bg-amber-100 text-amber-700 px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1 text-[11px]">
-                <span class="w-2 h-2 rounded-full bg-amber-500"></span> Mode Lokal
-            </span>
-        </div>
+            <h4 class="font-semibold text-slate-800 text-sm truncate mt-0.5">${item.nama}</h4>
+            <p class="text-xs text-slate-500 mt-1">
+              Stok: <span class="font-bold text-slate-800 text-sm">${item.stok}</span> ${item.satuan}
+            </p>
+          </div>
 
-        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            <div class="bg-white p-3.5 rounded-2xl border text-center shadow-sm">
-                <p class="text-xs font-semibold text-slate-500">Total Box</p>
-                <p id="statTotalBox" class="text-2xl font-black text-slate-800 mt-1">0</p>
-            </div>
-            <div class="bg-white p-3.5 rounded-2xl border border-blue-200 text-center shadow-sm">
-                <p class="text-xs font-semibold text-blue-600">Total IN</p>
-                <p id="statTotalIN" class="text-2xl font-black text-blue-700 mt-1">0.000 Kg</p>
-            </div>
-            <div class="bg-white p-3.5 rounded-2xl border border-amber-200 text-center shadow-sm">
-                <p class="text-xs font-semibold text-amber-600">Di-CUT</p>
-                <p id="statTotalCut" class="text-2xl font-black text-amber-600 mt-1">0 Box</p>
-            </div>
-            <div class="bg-white p-3.5 rounded-2xl border border-rose-200 text-center shadow-sm">
-                <p class="text-xs font-semibold text-rose-600">Total OUT</p>
-                <p id="statTotalOUT" class="text-2xl font-black text-rose-600 mt-1">0.000 Kg</p>
-            </div>
-            <div class="bg-white p-3.5 rounded-2xl border border-emerald-200 text-center shadow-sm col-span-2 sm:col-span-1">
-                <p class="text-xs font-semibold text-emerald-600">Stok Tersedia</p>
-                <p id="statStokKg" class="text-2xl font-black text-emerald-600 mt-1">0.000 Kg</p>
-            </div>
-        </div>
-
-        <div class="bg-white p-3.5 rounded-2xl border shadow-sm space-y-3">
-            <div class="relative">
-                <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-400 text-sm"></i>
-                <input type="text" id="searchInput" oninput="renderTable()" placeholder="Cari No. Box..." class="w-full pl-9 pr-3 py-2 bg-slate-50 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-            </div>
-            <button onclick="openModal()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl text-sm flex items-center justify-center gap-2">
-                <i class="fa-solid fa-plus"></i> Tambah Entry Box
+          <div class="flex items-center gap-1.5">
+            <button onclick="ubahStok('${item.id}', -1)" class="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-base flex items-center justify-center active:scale-95 transition">-</button>
+            <button onclick="ubahStok('${item.id}', 1)" class="w-8 h-8 rounded-lg bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-bold text-base flex items-center justify-center active:scale-95 transition">+</button>
+            <button onclick="hapusBarang('${item.id}')" class="w-8 h-8 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs flex items-center justify-center active:scale-95 transition ml-1">
+              <i class="fa-solid fa-trash"></i>
             </button>
-        </div>
+          </div>
+        `;
 
-        <div class="bg-white rounded-2xl border shadow-sm overflow-hidden">
-            <div class="p-3 bg-slate-50 border-b flex justify-between items-center text-sm font-bold">
-                <span class="flex items-center gap-2"><i class="fa-solid fa-table-cells text-blue-600"></i> Tabel Penyimpanan</span>
-                <span id="itemCountBadge" class="bg-slate-200 text-slate-700 text-xs px-2.5 py-0.5 rounded-full">0 Data</span>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-xs">
-                    <thead class="bg-slate-100 text-slate-600 border-b uppercase text-[10px]">
-                        <tr>
-                            <th class="py-3 px-3 text-center">NO</th>
-                            <th class="py-3 px-3 text-center">FOTO</th>
-                            <th class="py-3 px-3 text-center">IN (KG)</th>
-                            <th class="py-3 px-3 text-center">CUT</th>
-                            <th class="py-3 px-3 text-center">OUT</th>
-                            <th class="py-3 px-3 text-center">AKSI</th>
-                        </tr>
-                    </thead>
-                    <tbody id="inventoryTable" class="divide-y font-medium text-slate-700"></tbody>
-                </table>
-            </div>
-        </div>
+        listContainer.appendChild(card);
+      });
 
-        <div class="bg-white rounded-2xl border shadow-sm p-4 space-y-3">
-            <div class="flex justify-between items-center border-b pb-2">
-                <h3 class="font-bold text-sm flex items-center gap-2"><i class="fa-solid fa-clock-rotate-left text-blue-600"></i> History</h3>
-                <button onclick="clearHistory()" class="text-[11px] text-rose-600 hover:underline font-semibold flex items-center gap-1">
-                    <i class="fa-regular fa-trash-can"></i> Bersihkan
-                </button>
-            </div>
-            <div id="historyList" class="space-y-2 max-h-60 overflow-y-auto text-xs pr-1 divide-y"></div>
-        </div>
+      document.getElementById('total-jenis').innerText = keys.length;
+      document.getElementById('total-stok').innerText = totalStokFisik;
+    }
 
-    </main>
+    // 4. UBAH STOK REALTIME (+ / -)
+    function ubahStok(id, delta) {
+      const itemRef = refGudang.child(id);
+      itemRef.child('stok').transaction((currentStok) => {
+        const result = (currentStok || 0) + delta;
+        return result < 0 ? 0 : result;
+      });
+    }
 
-    <!-- Input tersembunyi khusus Kamera & Galeri dari Tabel -->
-    <input type="file" id="directCameraInput" accept="image/*" capture="environment" class="hidden" onchange="handleDirectTableUpload(event)">
-    <input type="file" id="directGalleryInput" accept="image/*" class="hidden" onchange="handleDirectTableUpload(event)">
+    // 5. HAPUS BARANG
+    function hapusBarang(id) {
+      if (confirm("Yakin ingin menghapus barang ini dari gudang?")) {
+        refGudang.child(id).remove();
+      }
+    }
 
-    <!-- Modal Pilihan Foto dari Tabel -->
-    <div id="photoOptionModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center p-4 z-50" onclick="closePhotoOptionModal()">
-        <div class="bg-white rounded-2xl max-w-xs w-full p-4 shadow-xl space-y-3" onclick="event.stopPropagation()">
-            <h3 class="font-bold text-sm text-center text-slate-800 border-b pb-2">Pilih Sumber Foto</h3>
-            <div class="grid grid-cols-2 gap-3 pt-1">
-                <button onclick="openDirectCamera()" class="flex flex-col items-center justify-center gap-2 p-3 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl font-bold border border-blue-200">
-                    <i class="fa-solid fa-camera text-2xl"></i>
-                    <span class="text-xs">Kamera</span>
-                </button>
-                <button onclick="openDirectGallery()" class="flex flex-col items-center justify-center gap-2 p-3 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-xl font-bold border border-slate-200">
-                    <i class="fa-solid fa-images text-2xl"></i>
-                    <span class="text-xs">Galeri</span>
-                </button>
-            </div>
-            <button onclick="closePhotoOptionModal()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-2 rounded-xl text-xs mt-2">Batal</button>
-        </div>
-    </div>
-
-    <!-- Modal Form Box -->
-    <div id="boxModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
-        <div class="bg-white rounded-2xl max-w-md w-full p-4 shadow-xl space-y-4">
-            <div class="flex justify-between items-center border-b pb-2">
-                <h3 id="modalTitle" class="font-bold text-base">Tambah Entry Box</h3>
-                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 text-lg"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-
-            <form id="boxForm" onsubmit="saveBoxData(event)" class="space-y-3 text-xs">
-                <input type="hidden" id="editKey">
-
-                <div>
-                    <label class="block font-semibold mb-1">No. Box / ID</label>
-                    <input type="text" id="boxNo" required class="w-full px-3 py-2 bg-slate-50 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Misal: 11">
-                </div>
-
-                <div>
-                    <label class="block font-semibold mb-1">Jumlah IN (Kg)</label>
-                    <input type="number" step="0.001" id="boxWeight" required class="w-full px-3 py-2 bg-slate-50 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Misal: 9.400">
-                </div>
-
-                <!-- Tombol Kamera dan Galeri di Form Modal -->
-                <div>
-                    <label class="block font-semibold mb-1">Ambil Foto (Opsional)</label>
-                    <div class="flex gap-2">
-                        <button type="button" onclick="triggerFormCamera()" class="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-bold py-2 px-3 rounded-xl flex items-center justify-center gap-2">
-                            <i class="fa-solid fa-camera"></i> Kamera
-                        </button>
-                        <button type="button" onclick="triggerFormGallery()" class="flex-1 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 font-bold py-2 px-3 rounded-xl flex items-center justify-center gap-2">
-                            <i class="fa-solid fa-images"></i> Galeri
-                        </button>
-                    </div>
-                    <input type="file" id="modalCameraInput" accept="image/*" capture="environment" class="hidden" onchange="previewModalPhoto(event)">
-                    <input type="file" id="modalGalleryInput" accept="image/*" class="hidden" onchange="previewModalPhoto(event)">
-                    
-                    <div id="modalPhotoPreviewContainer" class="mt-2 hidden flex items-center gap-2 bg-slate-50 p-2 rounded-xl border">
-                        <img id="modalPhotoPreview" src="" class="w-12 h-12 object-cover rounded-lg border">
-                        <span class="text-slate-600 text-[11px] font-semibold flex-1">Foto terpilih</span>
-                        <button type="button" onclick="removeModalPhoto()" class="text-rose-600 hover:text-rose-800 p-1"><i class="fa-solid fa-trash"></i></button>
-                    </div>
-                    
-                    <input type="hidden" id="existingPhoto">
-                </div>
-
-                <div class="flex items-center gap-6 py-2">
-                    <label class="inline-flex items-center gap-2 cursor-pointer font-bold text-blue-700">
-                        <input type="checkbox" id="isCut" class="w-4 h-4 text-blue-600 rounded"> Di-CUT
-                    </label>
-                    <label class="inline-flex items-center gap-2 cursor-pointer font-bold text-rose-600">
-                        <input type="checkbox" id="isOut" class="w-4 h-4 text-rose-600 rounded"> OUT
-                    </label>
-                </div>
-
-                <div class="flex gap-2 pt-2">
-                    <button type="button" onclick="closeModal()" class="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-2.5 rounded-xl">Batal</button>
-                    <button type="submit" id="submitBtn" class="w-1/2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl shadow">Simpan</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Modal Zoom Preview Foto -->
-    <div id="imagePreviewModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md hidden items-center justify-center p-4 z-50" onclick="closeImagePreview()">
-        <div class="relative max-w-lg w-full bg-white rounded-2xl overflow-hidden p-2 shadow-2xl" onclick="event.stopPropagation()">
-            <button onclick="closeImagePreview()" class="absolute top-3 right-3 bg-slate-800/70 hover:bg-slate-900 text-white w-8 h-8 rounded-full flex items-center justify-center z-10"><i class="fa-solid fa-xmark"></i></button>
-            <img id="modalPreviewImg" src="" alt="Preview Foto" class="w-full h-auto max-h-[80vh] object-contain rounded-xl">
-        </div>
-    </div>
-
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyFishStoreDatabaseKey2026",
-            authDomain: "fish-store-default-rtdb.firebaseapp.com",
-            databaseURL: "https://fish-store-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "fish-store-default-rtdb",
-            storageBucket: "fish-store-default-rtdb.appspot.com",
-            messagingSenderId: "100000000000",
-            appId: "1:100000000000:web:fishstore12345"
-        };
-        
-        let db = null, storage = null, dbListenerRef = null;
-        const myDeviceId = 'device_' + Math.random().toString(36).substring(2, 9);
-        let isInitialLoad = true;
-
-        try {
-            if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-            db = firebase.database();
-            storage = firebase.storage();
-        } catch(e) {
-            console.warn("Mode Standalone/Local Storage", e);
+    // 6. FILTER PENCARIAN
+    function filterBarang() {
+      const query = document.getElementById('search').value.toLowerCase();
+      const cards = document.querySelectorAll('.item-card');
+      cards.forEach(card => {
+        if (card.dataset.search.includes(query)) {
+          card.classList.remove('hidden');
+        } else {
+          card.classList.add('hidden');
         }
-
-        let currentGroupCode = "123456", localData = {}, historyData = [], activeTargetKeyForUpload = null;
-
-        if (localStorage.getItem('fishStoreGroupCode')) {
-            currentGroupCode = localStorage.getItem('fishStoreGroupCode');
-            document.getElementById('groupCodeInput').value = currentGroupCode;
-        }
-
-        loadLocalData();
-        connectToOnlineDatabase();
-
-        function showNotification(title, message, type = "success") {
-            const container = document.getElementById('toastContainer');
-            const toast = document.createElement('div');
-            let bgClass = type === "info" ? "bg-blue-600" : (type === "warning" ? "bg-amber-600" : "bg-emerald-600");
-            let icon = type === "info" ? "fa-circle-info" : (type === "warning" ? "fa-triangle-exclamation" : "fa-bell");
-
-            toast.className = `${bgClass} text-white p-3 rounded-2xl shadow-xl flex items-start gap-3 pointer-events-auto transition-all duration-300 transform -translate-y-2 opacity-0`;
-            toast.innerHTML = `
-                <div class="mt-0.5 text-base"><i class="fa-solid ${icon}"></i></div>
-                <div class="flex-1">
-                    <p class="font-bold text-xs leading-tight">${title}</p>
-                    <p class="text-[11px] opacity-90 mt-0.5 leading-snug">${message}</p>
-                </div>
-                <button onclick="this.parentElement.remove()" class="text-white/80 hover:text-white text-xs"><i class="fa-solid fa-xmark"></i></button>`;
-
-            container.appendChild(toast);
-            setTimeout(() => toast.classList.remove('-translate-y-2', 'opacity-0'), 10);
-            setTimeout(() => {
-                toast.classList.add('opacity-0', '-translate-y-2');
-                setTimeout(() => toast.remove(), 300);
-            }, 4000);
-        }
-
-        function loadLocalData() {
-            localData = JSON.parse(localStorage.getItem(`store_data_${currentGroupCode}`) || '{}');
-            historyData = JSON.parse(localStorage.getItem(`store_history_${currentGroupCode}`) || '[]');
-            renderTable();
-            calculateStats();
-            renderHistory();
-        }
-
-        function saveLocalData() {
-            localStorage.setItem(`store_data_${currentGroupCode}`, JSON.stringify(localData));
-            localStorage.setItem(`store_history_${currentGroupCode}`, JSON.stringify(historyData));
-            renderTable();
-            calculateStats();
-            renderHistory();
-            syncToOnline();
-        }
-
-        function syncToOnline() {
-            if (!db) return;
-            db.ref(`stores/${currentGroupCode}`).set({
-                data: localData,
-                history: historyData,
-                lastUpdatedBy: myDeviceId,
-                updatedAt: new Date().toISOString()
-            }).catch(err => console.error("Error Sync Online:", err));
-        }
-
-        function logActivity(message, type = "info") {
-            const time = new Date().toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'medium' });
-            historyData.unshift({ message, time, type });
-            if (historyData.length > 100) historyData.pop();
-        }
-
-        function renderHistory() {
-            const historyContainer = document.getElementById('historyList');
-            if (!historyData.length) {
-                historyContainer.innerHTML = `<p class="text-center text-slate-400 py-4">Belum ada riwayat aktivitas.</p>`;
-                return;
-            }
-
-            historyContainer.innerHTML = historyData.map(item => {
-                let iconClass = item.type === "add" ? "fa-circle-plus text-emerald-500" : (item.type === "edit" ? "fa-pen-to-square text-amber-500" : (item.type === "delete" ? "fa-trash-can text-rose-500" : "fa-circle-info text-blue-500"));
-                return `
-                <div class="pt-2 pb-1 flex justify-between items-start gap-2">
-                    <div class="flex items-start gap-2">
-                        <i class="fa-solid ${iconClass} mt-0.5"></i>
-                        <span class="font-medium text-slate-700">${item.message}</span>
-                    </div>
-                    <span class="text-[10px] text-slate-400 whitespace-nowrap">${item.time}</span>
-                </div>`;
-            }).join('');
-        }
-
-        function clearHistory() {
-            if (confirm("Apakah Anda yakin ingin menghapus semua riwayat aktivitas?")) {
-                historyData = [];
-                logActivity("Membuat riwayat baru (dikosongkan)", "delete");
-                saveLocalData();
-            }
-        }
-
-        function connectToOnlineDatabase() {
-            if (!db) return;
-            const syncBadge = document.getElementById('syncBadge');
-            isInitialLoad = true;
-
-            if (dbListenerRef) dbListenerRef.off();
-
-            db.ref('.info/connected').on('value', snap => {
-                if (snap.val() === true) {
-                    syncBadge.className = "text-[11px] bg-emerald-100 text-emerald-700 px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1";
-                    syncBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Terhubung (${currentGroupCode})`;
-                } else {
-                    syncBadge.className = "text-[11px] bg-amber-100 text-amber-700 px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1";
-                    syncBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500"></span> Mode Lokal`;
-                }
-            });
-            
-            dbListenerRef = db.ref(`stores/${currentGroupCode}`);
-            dbListenerRef.on('value', snapshot => {
-                const onlineVal = snapshot.val();
-                if (onlineVal) {
-                    if (!isInitialLoad && onlineVal.lastUpdatedBy && onlineVal.lastUpdatedBy !== myDeviceId) {
-                        const msg = onlineVal.history?.[0]?.message || "Ada pembaruan data stok ikan!";
-                        showNotification("Pembaruan Masuk! 🐟", msg, "success");
-                    }
-                    localData = onlineVal.data || {};
-                    historyData = onlineVal.history || [];
-                    localStorage.setItem(`store_data_${currentGroupCode}`, JSON.stringify(localData));
-                    localStorage.setItem(`store_history_${currentGroupCode}`, JSON.stringify(historyData));
-                    renderTable();
-                    calculateStats();
-                    renderHistory();
-                } else {
-                    syncToOnline();
-                }
-                isInitialLoad = false;
-            });
-        }
-
-        function changeGroupCode() {
-            const newCode = document.getElementById('groupCodeInput').value.trim();
-            if (newCode) {
-                currentGroupCode = newCode;
-                localStorage.setItem('fishStoreGroupCode', currentGroupCode);
-                showNotification("Kode Toko Diubah", `Sekarang terhubung ke Kode Angka: ${currentGroupCode}`, "info");
-                loadLocalData();
-                connectToOnlineDatabase();
-            } else {
-                alert("Masukkan kode angka toko!");
-            }
-        }
-
-        function shareGroupCode() {
-            if (navigator.share) {
-                navigator.share({
-                    title: 'STORE IKAN',
-                    text: `Kode Toko Angka untuk Sinkronisasi Stok: ${currentGroupCode}`,
-                }).catch(() => {});
-            } else {
-                navigator.clipboard.writeText(currentGroupCode);
-                showNotification("Kode Disalin!", `Kode Angka ${currentGroupCode} berhasil disalin ke clipboard.`, "info");
-            }
-        }
-
-        function backupData() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ data: localData, history: historyData }));
-            const downloadAnchor = document.createElement('a');
-            downloadAnchor.setAttribute("href", dataStr);
-            downloadAnchor.setAttribute("download", `backup_store_ikan_${currentGroupCode}_${new Date().toISOString().slice(0,10)}.json`);
-            document.body.appendChild(downloadAnchor);
-            downloadAnchor.click();
-            downloadAnchor.remove();
-        }
-
-        function renderTable() {
-            const tbody = document.getElementById('inventoryTable');
-            const searchVal = document.getElementById('searchInput').value.toLowerCase();
-            const keys = Object.keys(localData);
-            
-            let filteredKeys = keys.filter(k => localData[k].boxNo.toString().toLowerCase().includes(searchVal));
-            document.getElementById('itemCountBadge').innerText = `${filteredKeys.length} Data`;
-
-            if (filteredKeys.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-slate-400 font-medium">Belum ada data barang.</td></tr>`;
-                return;
-            }
-
-            tbody.innerHTML = filteredKeys.map((key) => {
-                const item = localData[key];
-                const weight = parseFloat(item.weight || 0).toFixed(3);
-                
-                return `
-                <tr class="hover:bg-slate-50 transition">
-                    <td class="py-3 px-3 text-center font-bold text-blue-700">${item.boxNo}</td>
-                    <td class="py-3 px-3 text-center">
-                        ${item.photo ? `
-                            <img src="${item.photo}" onclick="openImagePreview('${item.photo}')" class="w-8 h-8 object-cover rounded-lg mx-auto cursor-pointer border border-slate-200 hover:scale-110 transition shadow-sm">
-                        ` : `
-                            <button onclick="openPhotoOptionModal('${key}')" class="text-slate-400 hover:text-blue-600 transition p-1">
-                                <i class="fa-solid fa-camera text-base"></i>
-                            </button>
-                        `}
-                    </td>
-                    <td class="py-3 px-3 text-center font-bold text-slate-700">${weight} Kg</td>
-                    <td class="py-3 px-3 text-center">
-                        <input type="checkbox" ${item.isCut ? 'checked' : ''} onchange="toggleCut('${key}')" class="w-4 h-4 text-amber-500 rounded cursor-pointer accent-amber-500">
-                    </td>
-                    <td class="py-3 px-3 text-center">
-                        <input type="checkbox" ${item.isOut ? 'checked' : ''} onchange="toggleOut('${key}')" class="w-4 h-4 text-rose-500 rounded cursor-pointer accent-rose-500">
-                    </td>
-                    <td class="py-3 px-3 text-center">
-                        <div class="flex justify-center gap-1.5">
-                            <button onclick="editBox('${key}')" class="p-1 text-amber-600 hover:text-amber-800"><i class="fa-solid fa-pen-to-square"></i></button>
-                            <button onclick="deleteBox('${key}')" class="p-1 text-rose-600 hover:text-rose-800"><i class="fa-solid fa-trash-can"></i></button>
-                        </div>
-                    </td>
-                </tr>`;
-            }).join('');
-        }
-
-        function calculateStats() {
-            const keys = Object.keys(localData);
-            let totalBox = keys.length;
-            let totalIN = 0;
-            let totalCut = 0;
-            let totalOUT = 0;
-
-            keys.forEach(key => {
-                const item = localData[key];
-                const weight = parseFloat(item.weight) || 0;
-                totalIN += weight;
-                if (item.isCut) totalCut++;
-                if (item.isOut) totalOUT += weight;
-            });
-
-            let stokTersedia = totalIN - totalOUT;
-
-            document.getElementById('statTotalBox').innerText = totalBox;
-            document.getElementById('statTotalIN').innerText = `${totalIN.toFixed(3)} Kg`;
-            document.getElementById('statTotalCut').innerText = `${totalCut} Box`;
-            document.getElementById('statTotalOUT').innerText = `${totalOUT.toFixed(3)} Kg`;
-            document.getElementById('statStokKg').innerText = `${stokTersedia.toFixed(3)} Kg`;
-        }
-
-        function openModal() {
-            document.getElementById('boxForm').reset();
-            document.getElementById('editKey').value = '';
-            document.getElementById('existingPhoto').value = '';
-            removeModalPhoto();
-            document.getElementById('modalTitle').innerText = "Tambah Entry Box";
-            document.getElementById('submitBtn').innerText = "Simpan Barang";
-            document.getElementById('boxModal').classList.remove('hidden');
-            document.getElementById('boxModal').classList.add('flex');
-        }
-
-        function closeModal() {
-            document.getElementById('boxModal').classList.add('hidden');
-            document.getElementById('boxModal').classList.remove('flex');
-        }
-
-        function convertFileToBase64(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = () => resolve(reader.result);
-                reader.onerror = error => reject(error);
-            });
-        }
-
-        // Penanganan Kamera & Galeri pada Form Modal
-        function triggerFormCamera() { document.getElementById('modalCameraInput').click(); }
-        function triggerFormGallery() { document.getElementById('modalGalleryInput').click(); }
-
-        async function previewModalPhoto(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const base64 = await convertFileToBase64(file);
-                document.getElementById('existingPhoto').value = base64;
-                document.getElementById('modalPhotoPreview').src = base64;
-                document.getElementById('modalPhotoPreviewContainer').classList.remove('hidden');
-            }
-        }
-
-        function removeModalPhoto() {
-            document.getElementById('existingPhoto').value = '';
-            document.getElementById('modalPhotoPreview').src = '';
-            document.getElementById('modalPhotoPreviewContainer').classList.add('hidden');
-            document.getElementById('modalCameraInput').value = '';
-            document.getElementById('modalGalleryInput').value = '';
-        }
-
-        async function saveBoxData(event) {
-            event.preventDefault();
-            const editKey = document.getElementById('editKey').value;
-            const boxNo = document.getElementById('boxNo').value.trim();
-            const weight = parseFloat(document.getElementById('boxWeight').value) || 0;
-            const isCut = document.getElementById('isCut').checked;
-            const isOut = document.getElementById('isOut').checked;
-            const photoUrl = document.getElementById('existingPhoto').value || '';
-
-            const key = editKey || 'box_' + Date.now();
-            
-            localData[key] = {
-                boxNo,
-                weight,
-                photo: photoUrl,
-                isCut,
-                isOut,
-                updatedAt: new Date().toISOString()
-            };
-
-            if (editKey) {
-                logActivity(`Memperbarui data Box No. ${boxNo}`, "edit");
-            } else {
-                logActivity(`Menambahkan Box No. ${boxNo} (${weight} Kg)`, "add");
-            }
-
-            saveLocalData();
-            closeModal();
-            showNotification("Berhasil Disimpan!", `Data Box No. ${boxNo} telah disimpan.`, "success");
-        }
-
-        function editBox(key) {
-            const item = localData[key];
-            if (!item) return;
-
-            document.getElementById('editKey').value = key;
-            document.getElementById('boxNo').value = item.boxNo;
-            document.getElementById('boxWeight').value = item.weight;
-            document.getElementById('isCut').checked = item.isCut;
-            document.getElementById('isOut').checked = item.isOut;
-            document.getElementById('existingPhoto').value = item.photo || '';
-
-            if (item.photo) {
-                document.getElementById('modalPhotoPreview').src = item.photo;
-                document.getElementById('modalPhotoPreviewContainer').classList.remove('hidden');
-            } else {
-                removeModalPhoto();
-            }
-
-            document.getElementById('modalTitle').innerText = "Edit Entry Box";
-            document.getElementById('submitBtn').innerText = "Update Barang";
-
-            document.getElementById('boxModal').classList.remove('hidden');
-            document.getElementById('boxModal').classList.add('flex');
-        }
-
-        function deleteBox(key) {
-            const item = localData[key];
-            if (!item) return;
-
-            if (confirm(`Apakah Anda yakin ingin menghapus Box No. ${item.boxNo}?`)) {
-                logActivity(`Menghapus Box No. ${item.boxNo}`, "delete");
-                delete localData[key];
-                saveLocalData();
-                showNotification("Dihapus!", `Box No. ${item.boxNo} berhasil dihapus.`, "warning");
-            }
-        }
-
-        function toggleCut(key) {
-            if (localData[key]) {
-                localData[key].isCut = !localData[key].isCut;
-                const status = localData[key].isCut ? "di-CUT" : "batal CUT";
-                logActivity(`Box No. ${localData[key].boxNo} ${status}`, "edit");
-                saveLocalData();
-            }
-        }
-
-        function toggleOut(key) {
-            if (localData[key]) {
-                localData[key].isOut = !localData[key].isOut;
-                const status = localData[key].isOut ? "OUT (Keluar)" : "batal OUT";
-                logActivity(`Box No. ${localData[key].boxNo} ${status}`, "edit");
-                saveLocalData();
-            }
-        }
-
-        // Pilihan Foto Langsung dari Tabel
-        function openPhotoOptionModal(key) {
-            activeTargetKeyForUpload = key;
-            document.getElementById('photoOptionModal').classList.remove('hidden');
-            document.getElementById('photoOptionModal').classList.add('flex');
-        }
-
-        function closePhotoOptionModal() {
-            document.getElementById('photoOptionModal').classList.add('hidden');
-            document.getElementById('photoOptionModal').classList.remove('flex');
-        }
-
-        function openDirectCamera() {
-            closePhotoOptionModal();
-            document.getElementById('directCameraInput').click();
-        }
-
-        function openDirectGallery() {
-            closePhotoOptionModal();
-            document.getElementById('directGalleryInput').click();
-        }
-
-        async function handleDirectTableUpload(event) {
-            const file = event.target.files[0];
-            if (file && activeTargetKeyForUpload && localData[activeTargetKeyForUpload]) {
-                try {
-                    const base64Photo = await convertFileToBase64(file);
-                    localData[activeTargetKeyForUpload].photo = base64Photo;
-                    logActivity(`Mengunggah foto untuk Box No. ${localData[activeTargetKeyForUpload].boxNo}`, "edit");
-                    saveLocalData();
-                    showNotification("Foto Diunggah!", `Foto Box No. ${localData[activeTargetKeyForUpload].boxNo} telah disimpan.`, "success");
-                } catch(e) {
-                    console.error("Gagal mengunggah foto", e);
-                }
-            }
-            event.target.value = '';
-        }
-
-        function openImagePreview(url) {
-            document.getElementById('modalPreviewImg').src = url;
-            document.getElementById('imagePreviewModal').classList.remove('hidden');
-            document.getElementById('imagePreviewModal').classList.add('flex');
-        }
-
-        function closeImagePreview() {
-            document.getElementById('imagePreviewModal').classList.add('hidden');
-            document.getElementById('imagePreviewModal').classList.remove('flex');
-        }
-    </script>
+      });
+    }
+  </script>
 </body>
 </html>
