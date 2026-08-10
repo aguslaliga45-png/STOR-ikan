@@ -192,19 +192,19 @@
             <img id="modalPreviewImg" src="" alt="Preview Foto" class="w-full h-auto max-h-[80vh] object-contain rounded-xl">
         </div>
     </div>
-<script>
-    const firebaseConfig = {
-        apiKey: "AIzaSy...", 
-        authDomain: "ikan-heng.firebaseapp.com",
-        databaseURL: "https://ikan-heng-default-rtdb.asia-southeast1.firebasedatabase.app",
-        projectId: "ikan-heng",
-        storageBucket: "ikan-heng.appspot.com",
-        messagingSenderId: "1234567890", 
-        appId: "1:1234567890:web:..." 
-    };
 
-    let db = null, dbListenerRef = null;
-    
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyFishStoreDatabaseKey2026",
+            authDomain: "fish-store-default-rtdb.firebaseapp.com",
+            databaseURL: "https://fish-store-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "fish-store-default-rtdb",
+            storageBucket: "fish-store-default-rtdb.appspot.com",
+            messagingSenderId: "100000000000",
+            appId: "1:100000000000:web:fishstore12345"
+        };
+        
+        let db = null, dbListenerRef = null;
         const myDeviceId = 'device_' + Math.random().toString(36).substring(2, 9);
         let isInitialLoad = true;
         let capturedCameraBase64 = null;
